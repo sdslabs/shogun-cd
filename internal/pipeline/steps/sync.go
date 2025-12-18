@@ -16,3 +16,13 @@ type FileUpdate struct {
 func (*SyncStep) Type() string {
 	return SyncType
 }
+
+func (ss *SyncStep) Trigger() string {
+	return ss.TriggerWhen
+}
+
+func (ss *SyncStep) TargetInstance() string {
+	return ss.Target
+}
+
+func (ss *SyncStep) Execute() {}

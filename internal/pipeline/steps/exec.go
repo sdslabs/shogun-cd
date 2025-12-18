@@ -11,3 +11,13 @@ type ExecStep struct {
 func (*ExecStep) Type() string {
 	return ExecType
 }
+
+func (es *ExecStep) Trigger() string {
+	return es.TriggerWhen
+}
+
+func (es *ExecStep) TargetInstance() string {
+	return es.Target
+}
+
+func (es *ExecStep) Execute() {}

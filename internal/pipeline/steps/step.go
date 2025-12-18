@@ -17,7 +17,12 @@ type StepWrapper struct {
 	Step Step
 }
 type Step interface {
+	// Returns the type of the step as a string
 	Type() string
+	// Returns the trigger condition of the step
+	Trigger() string
+	// Runs the step execution logic
+	Execute()
 }
 
 // UnmarshalYAML is an interface hook for custom unmarshaling of StepWrapper

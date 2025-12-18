@@ -3,6 +3,7 @@ apiVersion: shogun.dev/v1
 kind: Pipeline
 metadata:
     name: deploy-api
+    enabled: true
 spec:
     triggers:
         - type: "ci_webhook"

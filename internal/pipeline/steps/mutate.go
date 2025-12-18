@@ -10,3 +10,9 @@ type MutateStep struct {
 func (*MutateStep) Type() string {
 	return MutateType
 }
+
+func (ms *MutateStep) Trigger() string {
+	return ms.TriggerWhen
+}
+
+func (ms *MutateStep) Execute() {}

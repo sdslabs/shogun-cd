@@ -9,3 +9,13 @@ type ApplyStep struct {
 func (*ApplyStep) Type() string {
 	return ApplyType
 }
+
+func (as *ApplyStep) Trigger() string {
+	return as.TriggerWhen
+}
+
+func (as *ApplyStep) TargetInstance() string {
+	return as.Target
+}
+
+func (as *ApplyStep) Execute() {}

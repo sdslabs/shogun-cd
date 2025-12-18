@@ -4,6 +4,7 @@ import "github.com/kunalvirwal/shogun-cd/internal/utils"
 
 type PipelineService interface {
 	LoadPipeline(path string)
+	ExecutePipeline(pipeline *Pipeline, trigger TriggerKind) bool
 }
 
 type Service struct {
