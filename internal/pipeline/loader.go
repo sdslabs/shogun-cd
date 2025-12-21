@@ -9,6 +9,9 @@ import (
 )
 
 func (p *Service) LoadPipeline(path string) {
+
+	// [TODO] Check repo readiness before loading pipeline
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		p.logger.LogNewError("failed to read pipeline file: %v", err)

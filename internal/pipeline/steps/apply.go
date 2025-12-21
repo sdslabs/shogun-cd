@@ -18,4 +18,6 @@ func (as *ApplyStep) TargetInstance() string {
 	return as.Target
 }
 
-func (as *ApplyStep) Execute() {}
+func (as *ApplyStep) Execute(deps *StepDeps) error {
+	return nil
+}

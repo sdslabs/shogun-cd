@@ -22,7 +22,7 @@ type Step interface {
 	// Returns the trigger condition of the step
 	Trigger() string
 	// Runs the step execution logic
-	Execute()
+	Execute(deps *StepDeps) error
 }
 
 // UnmarshalYAML is an interface hook for custom unmarshaling of StepWrapper

@@ -15,4 +15,6 @@ func (ms *MutateStep) Trigger() string {
 	return ms.TriggerWhen
 }
 
-func (ms *MutateStep) Execute() {}
+func (ms *MutateStep) Execute(deps *StepDeps) error {
+	return nil
+}

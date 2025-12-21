@@ -25,4 +25,6 @@ func (ss *SyncStep) TargetInstance() string {
 	return ss.Target
 }
 
-func (ss *SyncStep) Execute() {}
+func (ss *SyncStep) Execute(deps *StepDeps) error {
+	return nil
+}

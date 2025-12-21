@@ -6,6 +6,7 @@ import (
 )
 
 type Logger interface {
+	SetLevel(debug bool)
 	LogError(err error)
 	LogNewError(format string, args ...any)
 	LogInfo(format string, args ...any)
@@ -57,6 +58,14 @@ func NewLogger(LogLevel int, Showtime bool) Logger {
 
 func getTime() string {
 	return fmt.Sprintf("%v", time.Now().Format("2006-01-02 15:04:05"))
+}
+
+func (l *logger) SetLevel(debug bool) {
+	if debug {
+		l.Level = DebugLevel
+	} else {
+		l.Level = ProdLevel
+	}
 }
 
 // Logs some information with the provided tag and message

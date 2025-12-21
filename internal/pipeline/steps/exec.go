@@ -20,4 +20,6 @@ func (es *ExecStep) TargetInstance() string {
 	return es.Target
 }
 
-func (es *ExecStep) Execute() {}
+func (es *ExecStep) Execute(deps *StepDeps) error {
+	return nil
+}
