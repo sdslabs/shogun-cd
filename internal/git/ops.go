@@ -3,18 +3,17 @@ package git
 import (
 	"context"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 func (s *Service) CloneRepo(ctx context.Context, repoURL, branch, destPath string) error {
-	s.mu.Lock()
-	if s.ready {
+
+	if s.ready.Load() {
 		s.logger.Log("Repository already cloned and ready.")
-		s.mu.Unlock()
 		return nil
 	}
-	s.mu.Unlock()
 
 	// Check if repo exists and validate remote URL and branch
 	if s.repo.IsRepoValid(ctx, s.gitPath) {
@@ -42,7 +41,7 @@ func (s *Service) CloneRepo(ctx context.Context, repoURL, branch, destPath strin
 							s.logger.LogNewError("Failed to fetch from origin: %v", err)
 							return err
 						}
-					if _, err := s.repo.ExecGitCommand(ctx, s.gitPath, "checkout", "-B", s.repo.Branch, "origin/"+s.repo.Branch); err != nil {
+						if _, err := s.repo.ExecGitCommand(ctx, s.gitPath, "checkout", "-B", s.repo.Branch, "origin/"+s.repo.Branch); err != nil {
 							s.logger.LogNewError("Failed to checkout branch: %v", err)
 							return err
 						}
@@ -50,9 +49,7 @@ func (s *Service) CloneRepo(ctx context.Context, repoURL, branch, destPath strin
 					}
 				}
 
-				s.mu.Lock()
-				s.ready = true
-				s.mu.Unlock()
+				s.ready.Store(true)
 				return nil
 			}
 		}
@@ -72,10 +69,7 @@ func (s *Service) CloneRepo(ctx context.Context, repoURL, branch, destPath strin
 		s.logger.Log("Git clone output: %s", string(output))
 	}
 	s.logger.LogInfo("Repository cloned successfully")
-
-	s.mu.Lock()
-	s.ready = true
-	s.mu.Unlock()
+	s.ready.Store(true)
 
 	return nil
 }
@@ -89,10 +83,8 @@ func (s *Service) ClearCacheDir() error {
 }
 
 func (s *Service) StartPoller(ctx context.Context) {
-	s.mu.Lock()
-	ready := s.ready
-	s.mu.Unlock()
-	if !ready {
+
+	if !s.ready.Load() {
 		for {
 			s.logger.Log("Clone Failed: Retrying Clone...")
 			err := s.CloneRepo(ctx, s.repo.URL, s.repo.Branch, s.repo.CloneDir)
@@ -118,7 +110,43 @@ func (s *Service) StartPoller(ctx context.Context) {
 
 func (s *Service) Pull(ctx context.Context) error {
 	// Use singleflight to prevent concurrent pulls
-	return nil
+	_, err, _ := s.pullSF.Do("git-pull", func() (any, error) {
+		s.logger.Log("Fetching repo changes...")
+		if _, err := s.repo.ExecGitCommand(ctx, s.gitPath, "fetch", "origin"); err != nil {
+			s.logger.LogNewError("Failed to fetch from origin: %v", err)
+			return nil, err
+		}
+
+		out, err := s.repo.ExecGitCommand(ctx, s.gitPath, "rev-list", "--count", "HEAD...origin/"+s.repo.Branch)
+		if err != nil {
+			s.logger.LogNewError("Failed to check for new commits: %v", err)
+			return nil, err
+		}
+
+		diff, _ := strconv.Atoi(strings.TrimSpace(string(out)))
+		if diff == 0 {
+			// s.logger.Log("No new commits found.")
+			return nil, nil
+		}
+		s.logger.Log("New commits found: %d. Pulling changes...", diff)
+
+		s.ready.Store(false)
+		output, err := s.repo.ExecGitCommand(ctx, s.gitPath, "reset", "--hard", "origin/"+s.repo.Branch)
+		s.ready.Store(true)
+		if err != nil {
+			s.logger.LogNewError("Failed to pull from origin: %v", err)
+			return nil, err
+		}
+
+		if len(output) > 0 {
+			s.logger.Log("Pull output: %s", string(output))
+		}
+		s.logger.LogInfo("Pull completed successfully")
+		return nil, nil
+
+	})
+
+	return err
 }
 
 func (s *Service) WaitReady() error {

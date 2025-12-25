@@ -14,9 +14,10 @@ spec:
         # mutates the field and make a commit
         - mutate:
               trigger_when: ci_webhook # or git_changes
-              file: services/api/compose.yml
-              update_field: services.api.image
-              value: ${IMAGE} # from webhook
+              changes:
+                - file: services/api/compose.yml
+                  update_field: services.api.image
+                  value: "{{IMAGE}}" # from webhook
 
         # replaces the old instance of a file or dir with the new one on Github
         - sync:

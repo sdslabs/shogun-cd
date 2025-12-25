@@ -36,7 +36,7 @@ func initServices() {
 	}
 
 	// Initialize Pipeline service
-	pipelineService := pipeline.NewPipelineService(logger)
+	pipelineService := pipeline.NewPipelineService(logger, gitService)
 
 	// Initialize main application
 	app := app.NewApp(pipelineService, gitService, logger)

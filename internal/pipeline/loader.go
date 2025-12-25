@@ -83,13 +83,15 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 			if !p.validTrigger(step.TriggerWhen, i) {
 				return false
 			}
-			if step.File == "" {
-				p.logger.LogNewError("step %d mutate file cannot be empty", i+1)
-				return false
-			}
-			if step.UpdateField == "" {
-				p.logger.LogNewError("step %d mutate update_field cannot be empty", i+1)
-				return false
+			for _, change := range step.Changes {
+				if change.File == "" {
+					p.logger.LogNewError("step %d mutate file cannot be empty", i+1)
+					return false
+				}
+				if change.UpdateField == "" {
+					p.logger.LogNewError("step %d mutate update_field cannot be empty", i+1)
+					return false
+				}
 			}
 
 		case pipelineSteps.SyncType:

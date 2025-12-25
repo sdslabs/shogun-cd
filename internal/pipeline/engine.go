@@ -11,7 +11,8 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind) bool 
 	}
 
 	deps := &pipelineSteps.StepDeps{
-		Logger: p.logger,
+		Logger:     p.logger,
+		GitService: p.gitService,
 	}
 
 	p.logger.LogInfo("Executing pipeline: %s", pipeline.Metadata.Name)

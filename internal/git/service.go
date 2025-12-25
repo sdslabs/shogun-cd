@@ -3,7 +3,7 @@ package git
 import (
 	"context"
 	"os/exec"
-	"sync"
+	"sync/atomic"
 
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
@@ -24,11 +24,10 @@ type GitService interface {
 type Service struct {
 	logger          utils.Logger
 	repo            Repo
-	ready           bool
+	ready           atomic.Bool
 	pollingInterval int
 
 	gitPath string
-	mu      sync.Mutex
 	pullSF  singleflight.Group
 }
 
@@ -49,7 +48,6 @@ func NewGitService(logger utils.Logger, gitConfig config.Git) (GitService, error
 
 	gitSvc := &Service{
 		logger:          logger,
-		ready:           false,
 		pollingInterval: gitConfig.PollingInterval,
 		repo: Repo{
 			URL:      gitConfig.Repo,
@@ -57,7 +55,6 @@ func NewGitService(logger utils.Logger, gitConfig config.Git) (GitService, error
 			CloneDir: gitConfig.CloneDir,
 		},
 		gitPath: gitPath,
-		mu:      sync.Mutex{},
 		pullSF:  singleflight.Group{},
 	}
 

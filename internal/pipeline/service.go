@@ -1,6 +1,9 @@
 package pipeline
 
-import "github.com/kunalvirwal/shogun-cd/internal/utils"
+import (
+	"github.com/kunalvirwal/shogun-cd/internal/git"
+	"github.com/kunalvirwal/shogun-cd/internal/utils"
+)
 
 type PipelineService interface {
 	// Loads a pipeline from the specified yaml file path
@@ -10,11 +13,13 @@ type PipelineService interface {
 }
 
 type Service struct {
-	logger utils.Logger
+	logger     utils.Logger
+	gitService git.GitService
 }
 
-func NewPipelineService(logger utils.Logger) *Service {
+func NewPipelineService(logger utils.Logger, gitService git.GitService) *Service {
 	return &Service{
-		logger: logger,
+		logger:     logger,
+		gitService: gitService,
 	}
 }

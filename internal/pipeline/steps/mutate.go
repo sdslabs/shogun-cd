@@ -1,7 +1,11 @@
 package pipelineSteps
 
 type MutateStep struct {
-	TriggerWhen string `yaml:"trigger_when,omitempty"`
+	TriggerWhen string   `yaml:"trigger_when,omitempty"`
+	Changes     []Change `yaml:"changes"`
+}
+
+type Change struct {
 	File        string `yaml:"file"`
 	UpdateField string `yaml:"update_field"`
 	Value       string `yaml:"value"`
@@ -16,5 +20,6 @@ func (ms *MutateStep) Trigger() string {
 }
 
 func (ms *MutateStep) Execute(deps *StepDeps) error {
+	// R
 	return nil
 }

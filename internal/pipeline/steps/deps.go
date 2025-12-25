@@ -1,9 +1,13 @@
 package pipelineSteps
 
-import "github.com/kunalvirwal/shogun-cd/internal/utils"
+import (
+	"github.com/kunalvirwal/shogun-cd/internal/git"
+	"github.com/kunalvirwal/shogun-cd/internal/utils"
+)
 
 // StepDeps represents dependencies required by pipeline steps.
 type StepDeps struct {
 	// [TODO] Git and SSH
-	Logger utils.Logger
+	Logger     utils.Logger
+	GitService git.GitService
 }
