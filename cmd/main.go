@@ -1,6 +1,7 @@
 package main
 
 import (
+	api "github.com/kunalvirwal/shogun-cd/api/http"
 	"github.com/kunalvirwal/shogun-cd/internal/app"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/git"
@@ -9,8 +10,8 @@ import (
 )
 
 func main() {
+	api.StartAPIServer()
 	initServices()
-	// api.StartAPIServer()
 	// pipeline.LoadPipeline("./examples/pipeline.yaml")
 }
 
