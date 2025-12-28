@@ -16,7 +16,7 @@ const (
 
 type TargetService interface {
 	// Loads a pipeline from the specified yaml file path
-	LoadTarget(path string) *Target
+	LoadTarget(f []byte) *Target
 }
 
 type Service struct {

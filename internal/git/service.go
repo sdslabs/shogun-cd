@@ -4,10 +4,10 @@ import (
 	"context"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
-	"golang.org/x/sync/singleflight"
 )
 
 type GitService interface {
@@ -19,6 +19,16 @@ type GitService interface {
 	Pull(ctx context.Context) error
 	// Returns a channel that emits pull events with changed file paths
 	GetPullEvents() <-chan []string
+	// Locks the repo for exclusive access
+	LockRepo()
+	// Unlocks the repo
+	UnlockRepo()
+	// RLocks the repo for shared access
+	RLockRepo()
+	// RUnlocks the repo
+	RUnlockRepo()
+	// Get repo details
+	GetRepoRoot() string
 }
 
 type Service struct {
@@ -27,7 +37,7 @@ type Service struct {
 	pollingInterval int
 
 	gitPath        string
-	pullSF         singleflight.Group
+	pullbusy       atomic.Bool
 	pullEventsChan chan []string
 }
 
@@ -56,7 +66,6 @@ func NewGitService(logger utils.Logger, gitConfig config.Git) (GitService, error
 			CloneDir: gitConfig.CloneDir,
 		},
 		gitPath:        gitPath,
-		pullSF:         singleflight.Group{},
 		pullEventsChan: make(chan []string, 10),
 	}
 

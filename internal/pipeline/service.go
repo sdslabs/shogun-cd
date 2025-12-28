@@ -7,7 +7,7 @@ import (
 
 type PipelineService interface {
 	// Loads a pipeline from the specified yaml file path
-	LoadPipeline(path string)
+	LoadPipeline(f []byte) *Pipeline
 	// Executes the given pipeline with the specified trigger
 	ExecutePipeline(pipeline *Pipeline, trigger TriggerKind) bool
 }

@@ -100,22 +100,43 @@ func (s *Service) CloneAndStartPoller(ctx context.Context) {
 	}
 	s.repo.mu.Unlock()
 
-	s.logger.LogInfo("Starting git poller for repository: %s", s.repo.URL)
+	go func() {
 
-	ticker := time.NewTicker(time.Duration(s.pollingInterval) * time.Second)
-	for range ticker.C {
-		s.logger.Log("Polling for changes...")
-		go func() {
-			if err := s.Pull(ctx); err != nil {
-				s.logger.LogNewError("Git pull failed: ", err)
+		s.logger.LogInfo("Starting git poller for repository: %s", s.repo.URL)
+
+		ticker := time.NewTicker(time.Duration(s.pollingInterval) * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				go func() {
+					if err := s.Pull(ctx); err != nil {
+						s.logger.LogNewError("Git pull failed: ", err)
+					}
+				}()
+			case <-ctx.Done():
+				s.logger.LogInfo("Git poller stopped.")
+				return
 			}
-		}()
-	}
+		}
+	}()
 }
 
+// Pull pulls the latest changes from the remote repository
+// If there are new changes, it sends the list of changed file paths to the pull events channel
+// Pull is thread-safe and can be called concurrently
 func (s *Service) Pull(ctx context.Context) error {
-	// Use singleflight to prevent concurrent pulls
-	fileDiffs, err, _ := s.pullSF.Do("git-pull", func() (any, error) {
+	// Use atomic.bool and CAS to ensure only one pull at a time
+	if !s.pullbusy.CompareAndSwap(false, true) {
+		s.logger.Log("Pull already in progress, skipping...")
+		return nil
+	}
+
+	fileDiffs, err := func() ([]string, error) {
+
+		s.repo.mu.Lock()
+		defer s.repo.mu.Unlock()
 
 		s.logger.Log("Fetching repo changes...")
 		if _, err := s.repo.ExecGitCommand(ctx, s.gitPath, "fetch", "origin"); err != nil {
@@ -142,9 +163,6 @@ func (s *Service) Pull(ctx context.Context) error {
 		}
 		s.logger.Log("New commits found: %d. Pulling changes...", diff)
 
-		s.repo.mu.Lock()
-		defer s.repo.mu.Unlock()
-
 		output, err := s.repo.ExecGitCommand(ctx, s.gitPath, "reset", "--hard", "origin/"+s.repo.Branch)
 		if err != nil {
 			s.logger.LogNewError("Failed to pull from origin: %v", err)
@@ -167,29 +185,45 @@ func (s *Service) Pull(ctx context.Context) error {
 
 		return fileDiffs, nil
 
-	})
+	}()
 
-	fileDiffSlice, ok := fileDiffs.([]string)
-	if !ok {
-		fileDiffSlice = []string{}
-	}
+	s.pullbusy.Store(false)
 
-	if len(fileDiffSlice) > 0 {
+	if len(fileDiffs) > 0 {
 		select {
-		case s.pullEventsChan <- fileDiffSlice:
+		case s.pullEventsChan <- fileDiffs:
 		default:
 			s.logger.LogNewError("Pull events channel is full; skipping sending pull event")
 		}
 	}
 
-	// [TODO] Add support for file diff triggered pipeline execution
 	return err
 }
 
-// func (s *Service) WaitReady() error {
-// 	return nil
-// }
-
+// GetPullEvents returns a channel that emits pull events with changed file paths
 func (s *Service) GetPullEvents() <-chan []string {
 	return s.pullEventsChan
+}
+
+// LockRepo locks the repository for exclusive access
+func (s *Service) LockRepo() {
+	s.repo.mu.Lock()
+}
+
+// UnlockRepo unlocks the repository
+func (s *Service) UnlockRepo() {
+	s.repo.mu.Unlock()
+}
+
+func (s *Service) RLockRepo() {
+	s.repo.mu.RLock()
+}
+
+func (s *Service) RUnlockRepo() {
+	s.repo.mu.RUnlock()
+}
+
+// GetRepoRoot returns the root directory of the repository
+func (s *Service) GetRepoRoot() string {
+	return s.repo.CloneDir
 }

@@ -49,7 +49,6 @@ func initServices() {
 	// Initialize main application
 	app := app.NewApp(logger, gitService, pipelineService, targetService)
 
-	pipelineService.LoadPipeline("./cache/pipeline.yaml")
 	_ = app
 
 	<-make(chan struct{}) // Block forever

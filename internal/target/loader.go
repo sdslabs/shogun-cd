@@ -1,21 +1,14 @@
 package target
 
 import (
-	"os"
-
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"go.yaml.in/yaml/v3"
 )
 
-func (s *Service) LoadTarget(path string) *Target {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		s.logger.LogNewError("failed to read target file: %v", err)
-		return nil
-	}
+func (s *Service) LoadTarget(f []byte) *Target {
 
 	var target Target
-	if err := yaml.Unmarshal(data, &target); err != nil {
+	if err := yaml.Unmarshal(f, &target); err != nil {
 		s.logger.LogNewError("failed to unmarshal target YAML: %v", err)
 		return nil
 	}
@@ -32,7 +25,7 @@ func (s *Service) LoadTarget(path string) *Target {
 }
 
 func validateTarget(logger utils.Logger, target *Target) bool {
-	if target.ApiVersion != "shogun/v1" {
+	if target.ApiVersion != "shogun.dev/v1" {
 		logger.LogNewError("invalid apiVersion: %s", target.ApiVersion)
 		return false
 	}
