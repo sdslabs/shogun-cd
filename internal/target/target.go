@@ -1,10 +1,8 @@
 package target
 
 import (
-	"os"
-
+	"github.com/kunalvirwal/shogun-cd/internal/git"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
-	"go.yaml.in/yaml/v3"
 )
 
 type Kind string
@@ -15,6 +13,16 @@ const (
 	ServerType  = "server"
 	ClusterType = "cluster"
 )
+
+type TargetService interface {
+	// Loads a pipeline from the specified yaml file path
+	LoadTarget(path string) *Target
+}
+
+type Service struct {
+	logger     utils.Logger
+	gitService git.GitService
+}
 
 type Target struct {
 	ApiVersion string   `yaml:"apiVersion"`
@@ -35,51 +43,9 @@ type Spec struct {
 	AccessSecret string `yaml:"access-key-secret"`
 }
 
-func LoadTarget(logger utils.Logger, path string) *Target {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		logger.LogNewError("failed to read target file: %v", err)
-		return nil
+func NewTargetService(logger utils.Logger, gitService git.GitService) TargetService {
+	return &Service{
+		logger:     logger,
+		gitService: gitService,
 	}
-
-	var target Target
-	if err := yaml.Unmarshal(data, &target); err != nil {
-		logger.LogNewError("failed to unmarshal target YAML: %v", err)
-		return nil
-	}
-
-	// [TODO]: Validate the target structure here if needed
-	if !validateTarget(logger, &target) {
-		return nil
-	}
-
-	logger.LogInfo("Target loaded: Name=%s, Type=%s, Host=%s", target.Metadata.Name, target.Metadata.Type, target.Spec.Host)
-
-	// [TODO]: Further processing of the loaded target, store into DB and all
-
-	return &target
-}
-
-func validateTarget(logger utils.Logger, target *Target) bool {
-	if target.ApiVersion != "shogun/v1" {
-		logger.LogNewError("invalid apiVersion: %s", target.ApiVersion)
-		return false
-	}
-	if target.Kind != TargetKind {
-		logger.LogNewError("invalid kind: %s", target.Kind)
-		return false
-	}
-	if target.Metadata.Type != ServerType && target.Metadata.Type != ClusterType {
-		logger.LogNewError("invalid target type: %s", target.Metadata.Type)
-		return false
-	}
-	if target.Spec.Host == "" || target.Spec.User == "" || target.Spec.AccessSecret == "" {
-		logger.LogNewError("host, user, and access-key-secret must be provided")
-		return false
-	}
-	if target.Spec.Port <= 0 || target.Spec.Port > 65535 {
-		logger.LogNewError("invalid port number: %d", target.Spec.Port)
-		return false
-	}
-	return true
 }

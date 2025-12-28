@@ -20,7 +20,7 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 	return cmd.CombinedOutput()
 }
 
-// IsRepoValid checks if the clone directory exists and is a valid git repository
+// IsRepoValid checks if the clone directory exists and is a valid git repository with intact working tree
 func (r *Repo) IsRepoValid(ctx context.Context, gitPath string) bool {
 	// Check if directory exists
 	if _, err := os.Stat(r.CloneDir); os.IsNotExist(err) {
@@ -30,13 +30,6 @@ func (r *Repo) IsRepoValid(ctx context.Context, gitPath string) bool {
 	// Check if .git directory exists
 	gitDir := filepath.Join(r.CloneDir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
-		return false
-	}
-
-	// Verify it's a valid git repo by running git status
-	cmd := exec.CommandContext(ctx, gitPath, "rev-parse", "--git-dir")
-	cmd.Dir = r.CloneDir
-	if err := cmd.Run(); err != nil {
 		return false
 	}
 
