@@ -5,7 +5,9 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/app"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/git"
+	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
+	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
@@ -39,10 +41,15 @@ func initServices() (utils.Logger, *config.Config) {
 	// Initialize Pipeline service
 	pipelineService := pipeline.NewPipelineService(logger, gitService)
 
-	// Initialize main application
-	app := app.NewApp(pipelineService, gitService, logger)
+	// Initialize Target service
+	targetService := target.NewTargetService(logger, gitService)
 
-	pipelineService.LoadPipeline("./cache/pipeline.yaml")
+	orch := orchestrator.New(logger, gitService, pipelineService, targetService)
+	orch.Start()
+
+	// Initialize main application
+	app := app.NewApp(logger, gitService, pipelineService, targetService)
+
 	_ = app
 
 	// <-make(chan struct{}) // Block forever
