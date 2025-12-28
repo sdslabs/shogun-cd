@@ -1,4 +1,4 @@
-package controllers
+package middlewares
 
 import (
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
@@ -6,14 +6,14 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
-type Handler struct {
+type Manager struct {
 	logger   utils.Logger
 	config   *config.Config
 	response response.Responder
 }
 
-func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder) *Handler {
-	return &Handler{
+func NewManager(l utils.Logger, cfg *config.Config, responder response.Responder) *Manager {
+	return &Manager{
 		logger:   l,
 		config:   cfg,
 		response: responder,

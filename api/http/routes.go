@@ -3,10 +3,10 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/http/controllers"
-	m "github.com/kunalvirwal/shogun-cd/api/http/middlewares"
+	"github.com/kunalvirwal/shogun-cd/api/http/middlewares"
 )
 
-func initRoutes(router *gin.Engine, h *controllers.Handler) {
+func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handler) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.Login)
@@ -17,7 +17,7 @@ func initRoutes(router *gin.Engine, h *controllers.Handler) {
 	}
 
 	admin := router.Group("/admin")
-	admin.Use(m.AuthRequired(), m.VerifyAdmin)
+	admin.Use(m.AuthRequired, m.VerifyAdmin)
 	{
 		key := admin.Group("/api-keys")
 		{
@@ -35,14 +35,14 @@ func initRoutes(router *gin.Engine, h *controllers.Handler) {
 	}
 
 	system := router.Group("/system")
-	system.Use(m.AuthRequired())
+	system.Use(m.AuthRequired)
 	{
 		system.GET("/targets", h.ListAllTargets)
 		system.GET("/pipelines", h.ListAllPipelines)
 	}
 
 	pipelines := router.Group("/pipelines/:pipeline")
-	pipelines.Use(m.AuthRequired())
+	pipelines.Use(m.AuthRequired)
 	{
 		webhooks := pipelines.Group("/webhooks")
 		{

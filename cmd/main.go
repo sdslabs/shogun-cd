@@ -10,12 +10,12 @@ import (
 )
 
 func main() {
-	api.StartAPIServer()
-	initServices()
+	l, c := initServices()
+	api.StartAPIServer(l, c)
 	// pipeline.LoadPipeline("./examples/pipeline.yaml")
 }
 
-func initServices() {
+func initServices() (utils.Logger, *config.Config) {
 
 	// Initialize logger
 	logger := utils.NewLogger(utils.DebugLevel, true)
@@ -24,7 +24,7 @@ func initServices() {
 	cfg, err := config.LoadConfigs(logger)
 	if err != nil {
 		logger.LogNewError("Invalid config: Stopping Shogun...")
-		return
+		return logger, nil
 	}
 
 	logger.SetLevel(cfg.Debug)
@@ -33,7 +33,7 @@ func initServices() {
 	gitService, err := git.NewGitService(logger, cfg.GitConfig)
 	if err != nil {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
-		return
+		return logger, cfg
 	}
 
 	// Initialize Pipeline service
@@ -45,6 +45,8 @@ func initServices() {
 	pipelineService.LoadPipeline("./cache/pipeline.yaml")
 	_ = app
 
-	<-make(chan struct{}) // Block forever
+	// <-make(chan struct{}) // Block forever
+
+	return logger, cfg
 
 }

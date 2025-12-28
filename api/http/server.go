@@ -1,23 +1,31 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/http/controllers"
+	"github.com/kunalvirwal/shogun-cd/api/http/middlewares"
+	"github.com/kunalvirwal/shogun-cd/api/http/response"
+	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
-func StartAPIServer() {
-	logger := utils.NewLogger(utils.DebugLevel, true)
-	//[TODO] pass same logger through argument throughout.
+func StartAPIServer(logger utils.Logger, cfg *config.Config) {
 
 	r := newRouter()
-	h := controllers.NewHandler(logger)
-	initRoutes(r, h)
 
-	if err := r.Run(":7007"); err != nil {
+	responder := response.NewResponder(cfg.Debug)
+	m := middlewares.NewManager(logger, cfg, responder)
+	h := controllers.NewHandler(logger, cfg, responder)
+
+	initRoutes(r, m, h)
+
+	if err := r.Run(fmt.Sprintf(":%v", cfg.ApiConfig.Port)); err != nil {
 		logger.LogError(err)
 	}
+
 }
 
 func newRouter() *gin.Engine {

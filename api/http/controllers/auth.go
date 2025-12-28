@@ -4,12 +4,42 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kunalvirwal/shogun-cd/api/http/response"
+	"github.com/kunalvirwal/shogun-cd/api/http/request"
+	"github.com/kunalvirwal/shogun-cd/internal/types"
+	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
 func (h *Handler) Login(c *gin.Context) {
+	var req request.LoginRequest
 
-	//[TODO] login handler
+	if err := c.ShouldBind(&req); err != nil { //currently both json and form input allowed [TODO] should we only accept json?
+		h.response.BadRequest(c, "Bad Input", err)
+		return
+	}
 
-	response.Success(c, fmt.Sprintf("logged in as - %v", nil), nil)
+	//[TODO] multi user support through DB lookup
+	validEmail := utils.SecureCompare(req.Email, h.config.ApiConfig.Admin.Email)
+	validPassword := utils.SecureCompare(req.Password, h.config.ApiConfig.Admin.Password)
+	if !validEmail || !validPassword {
+		h.response.Unauthorized(c, "Invalid Email or Password", nil)
+		return
+	}
+
+	//[TODO] DB call to get the user's role to be embedded in jwt.
+	role := types.RoleAdmin
+	secret := h.config.ApiConfig.JWT.Secret
+	exp := h.config.ApiConfig.JWT.ExpirationHours
+
+	token, err := utils.GenerateToken(req.Email, role, secret, exp)
+	if err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
+	data := gin.H{
+		"token":            token,
+		"expiration_hours": exp,
+	}
+
+	h.response.Success(c, fmt.Sprintf("logged in as - %v", req.Email), data)
 }
