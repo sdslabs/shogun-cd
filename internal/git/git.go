@@ -16,6 +16,16 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 		cmd.Dir = r.CloneDir
 	}
 
+	if r.DeployKeys != nil {
+		cmd.Env = append(os.Environ(),
+			"GIT_SSH_COMMAND=ssh -i "+r.DeployKeys.PrivatePath+" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
+		)
+	} else {
+		cmd.Env = append(os.Environ(),
+			"GIT_SSH_COMMAND=ssh -o IdentitiesOnly=yes -o IdentityFile=/dev/null -o StrictHostKeyChecking=accept-new",
+		)
+	}
+
 	// [TODO] Change this to streaming output
 	return cmd.CombinedOutput()
 }

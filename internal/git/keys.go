@@ -56,7 +56,7 @@ func (s *Service) CreateAndAddDeployKey(keyDir string) error {
 	_, err2 := os.Stat(publicKeyPath)
 	if err1 == nil && err2 == nil {
 		s.logger.LogInfo("Deploy key pair already exists at %s and %s", privateKeyPath, publicKeyPath)
-		s.deployKeys = keys
+		s.repo.DeployKeys = keys
 		return nil
 	}
 
@@ -93,7 +93,7 @@ func (s *Service) CreateAndAddDeployKey(keyDir string) error {
 		return err
 	}
 
-	s.deployKeys = keys
+	s.repo.DeployKeys = keys
 	s.logger.LogInfo("Deploy key pair created at %s and %s", privateKeyPath, publicKeyPath)
 	return nil
 }
