@@ -29,12 +29,15 @@ type GitService interface {
 	RUnlockRepo()
 	// Get repo details
 	GetRepoRoot() string
+	// CreateAndAddDeployKey creates an SSH key pair to be added as a deploy key and and adds it to git service
+	CreateAndAddDeployKey(keyDir string) error
 }
 
 type Service struct {
 	logger          utils.Logger
 	repo            Repo
 	pollingInterval int
+	deployKeys      *KeyPair
 
 	gitPath        string
 	pullbusy       atomic.Bool
@@ -48,6 +51,11 @@ type Repo struct {
 	mu       sync.RWMutex
 }
 
+type KeyPair struct {
+	PrivatePath string
+	PublicPath  string
+}
+
 func NewGitService(logger utils.Logger, gitConfig config.Git) (GitService, error) {
 
 	gitPath, err := exec.LookPath("git")
@@ -56,6 +64,10 @@ func NewGitService(logger utils.Logger, gitConfig config.Git) (GitService, error
 		return nil, err
 	}
 	logger.Log("Git executable found at: %s", gitPath)
+
+	if gitConfig.CloneDir == "" {
+		gitConfig.CloneDir = ".data/cache/"
+	}
 
 	gitSvc := &Service{
 		logger:          logger,
@@ -67,6 +79,12 @@ func NewGitService(logger utils.Logger, gitConfig config.Git) (GitService, error
 		},
 		gitPath:        gitPath,
 		pullEventsChan: make(chan []string, 10),
+	}
+
+	if gitConfig.CreateDeployKey {
+		if err := gitSvc.CreateAndAddDeployKey(gitConfig.KeyDir); err != nil {
+			return nil, err
+		}
 	}
 
 	return gitSvc, nil
