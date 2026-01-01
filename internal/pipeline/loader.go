@@ -80,6 +80,10 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 					p.logger.LogNewError("step %d mutate file cannot be empty", i+1)
 					return false
 				}
+				if !strings.HasSuffix(change.File, ".yaml") && !strings.HasSuffix(change.File, ".yml") {
+					p.logger.LogNewError("step %d mutate file must have .yaml or .yml extension", i+1)
+					return false
+				}
 				if change.UpdateField == "" {
 					p.logger.LogNewError("step %d mutate update_field cannot be empty", i+1)
 					return false

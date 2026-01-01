@@ -8,10 +8,21 @@ import (
 	"time"
 )
 
+const (
+	GHusername = ""
+	GHemail    = ""
+)
+
 // CloneRepo clones the git repository to the specified directory
 // If the repository already exists, it validates the remote URL and branch or switches to the correct branch
 // If the clone fails, it returns an error
 func (s *Service) CloneRepo(ctx context.Context) error {
+
+	err := s.setGHaccount()
+	if err != nil {
+		return err
+	}
+	s.logger.Log("Github account configured")
 
 	// Check if repo exists and validate remote URL and branch
 	if s.repo.IsRepoValid(ctx, s.gitPath) {
@@ -77,6 +88,24 @@ func (s *Service) CloneRepo(ctx context.Context) error {
 	}
 	s.logger.LogInfo("Repository cloned successfully")
 
+	return nil
+}
+
+func (s *Service) setGHaccount() error {
+
+	_, err := s.repo.ExecGitCommand(context.Background(), s.gitPath, "config", "user.name", GHusername)
+	if err != nil {
+		s.logger.LogNewError("Failed to set git username: %v", err)
+		return err
+	}
+
+	_, err = s.repo.ExecGitCommand(context.Background(), s.gitPath, "config", "user.email", GHemail)
+	if err != nil {
+		s.logger.LogNewError("Failed to set git email: %v", err)
+		return err
+	}
+
+	s.logger.LogInfo("Git user configured")
 	return nil
 }
 

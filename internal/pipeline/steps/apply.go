@@ -19,5 +19,7 @@ func (as *ApplyStep) TargetInstance() string {
 }
 
 func (as *ApplyStep) Execute(deps *StepDeps) error {
+	deps.Logger.Log("Executed apply step")
+
 	return nil
 }

@@ -21,5 +21,6 @@ func (es *ExecStep) TargetInstance() string {
 }
 
 func (es *ExecStep) Execute(deps *StepDeps) error {
+	deps.Logger.Log("Executed exec step")
 	return nil
 }

@@ -2,6 +2,8 @@ package orchestrator
 
 import (
 	"context"
+
+	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 )
 
 func (o *orchestrator) Start() {
@@ -26,6 +28,8 @@ func (o *orchestrator) Start() {
 				files := make([]string, len(changedFiles))
 				copy(files, changedFiles)
 				o.RunIndexer()
+				pipelines := o.Pipelines.Load()
+				o.pipelineService.ExecutePipeline((*pipelines)["deploy-my-app"], pipeline.WebhookTriggerKind)
 				// [TODO] Now run pipelines affected by these changed files
 			case <-ctx.Done():
 				return
