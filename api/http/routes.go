@@ -13,7 +13,9 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 	}
 	webhook := router.Group("/webhook")
 	{
-		webhook.POST("/:token", h.HandleWebhook)
+		webhook.POST("/:slug", h.HandleWebhook)
+		webhook.GET("", m.AuthRequired, h.ListAllWebhooks)
+		webhook.DELETE("/:slug", m.AuthRequired, m.VerifyAdmin, h.DeleteWebhook)
 	}
 
 	admin := router.Group("/admin")
@@ -48,7 +50,6 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		{
 			webhooks.GET("", h.ListPipelineWebhooks)
 			webhooks.POST("", h.CreateWebhook)
-			webhooks.DELETE("/:webhook_id", h.DeleteWebhook)
 		}
 
 		runs := pipelines.Group("/runs")

@@ -1,3 +1,4 @@
 .idea
 cache/
 tmp/
+config.yaml

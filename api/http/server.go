@@ -10,15 +10,16 @@ import (
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
+	"github.com/kunalvirwal/shogun-cd/webhooks"
 )
 
-func StartAPIServer(logger utils.Logger, cfg *config.Config) {
+func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookService) {
 
 	r := newRouter()
 
 	responder := response.NewResponder(cfg.Debug)
-	m := middlewares.NewManager(logger, cfg, responder)
-	h := controllers.NewHandler(logger, cfg, responder)
+	m := middlewares.NewManager(logger, cfg, responder, w)
+	h := controllers.NewHandler(logger, cfg, responder, w)
 
 	initRoutes(r, m, h)
 

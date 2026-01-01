@@ -9,15 +9,16 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
+	"github.com/kunalvirwal/shogun-cd/webhooks"
 )
 
 func main() {
-	l, c := initServices()
-	api.StartAPIServer(l, c)
+	l, c, w := initServices()
+	api.StartAPIServer(l, c, w)
 	// pipeline.LoadPipeline("./examples/pipeline.yaml")
 }
 
-func initServices() (utils.Logger, *config.Config) {
+func initServices() (utils.Logger, *config.Config, webhooks.WebhookService) {
 
 	// Initialize logger
 	logger := utils.NewLogger(utils.DebugLevel, true)
@@ -26,7 +27,7 @@ func initServices() (utils.Logger, *config.Config) {
 	cfg, err := config.LoadConfigs(logger)
 	if err != nil {
 		logger.LogNewError("Invalid config: Stopping Shogun...")
-		return logger, nil
+		return logger, nil, nil
 	}
 
 	logger.SetLevel(cfg.Debug)
@@ -35,7 +36,7 @@ func initServices() (utils.Logger, *config.Config) {
 	gitService, err := git.NewGitService(logger, cfg.GitConfig)
 	if err != nil {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
-		return logger, cfg
+		return logger, cfg, nil
 	}
 
 	// Initialize Pipeline service
@@ -54,6 +55,8 @@ func initServices() (utils.Logger, *config.Config) {
 
 	// <-make(chan struct{}) // Block forever
 
-	return logger, cfg
+	wh := webhooks.NewWebhookService(logger)
+
+	return logger, cfg, wh
 
 }

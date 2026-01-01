@@ -4,13 +4,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kunalvirwal/shogun-cd/api/http/request"
 	"github.com/kunalvirwal/shogun-cd/internal/types"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
-)
-
-const (
-	ContextKeyEmail = "user_email"
-	ContextKeyRole  = "user_role"
 )
 
 func (m *Manager) AuthRequired(c *gin.Context) {
@@ -37,15 +33,15 @@ func (m *Manager) AuthRequired(c *gin.Context) {
 		return
 	}
 
-	c.Set(ContextKeyEmail, claims.Email)
-	c.Set(ContextKeyRole, claims.Role)
+	c.Set(request.ContextKeyEmail, claims.Email)
+	c.Set(request.ContextKeyRole, claims.Role)
 
 	c.Next()
 
 }
 
 func (m *Manager) VerifyAdmin(c *gin.Context) {
-	role := getUserRole(c)
+	role := request.GetUserRole(c)
 
 	if role != types.RoleAdmin {
 		m.response.Forbidden(c, "Access denied: Admin privileges required", nil)
@@ -54,24 +50,4 @@ func (m *Manager) VerifyAdmin(c *gin.Context) {
 	}
 
 	c.Next()
-}
-
-func getUserEmail(c *gin.Context) string {
-	value, exists := c.Get(ContextKeyEmail)
-	if !exists {
-		return ""
-	}
-	return value.(string)
-}
-
-func getUserRole(c *gin.Context) types.Role {
-	value, exists := c.Get(ContextKeyRole)
-	if !exists {
-		return ""
-	}
-	role := value.(types.Role)
-	if _, ok := role.ValidRole(); ok {
-		return role
-	}
-	return ""
 }
