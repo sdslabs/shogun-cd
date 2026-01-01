@@ -12,6 +12,11 @@ func (o *orchestrator) Start() {
 	// Clone repo and start poller
 	o.gitService.CloneAndStartPoller(ctx)
 	o.RunIndexer()
+	pipelines := o.Pipelines.Load()
+	vals := make(map[string]string)
+	vals["IMAGE"] = "mongo:latest"
+	// [TEST] Run a pipeline
+	o.pipelineService.ExecutePipeline((*pipelines)["deploy-my-app"], pipeline.WebhookTriggerKind, vals)
 
 	// Start Git Watcher
 	gitEventsChan := o.gitService.GetPullEvents()
@@ -28,8 +33,6 @@ func (o *orchestrator) Start() {
 				files := make([]string, len(changedFiles))
 				copy(files, changedFiles)
 				o.RunIndexer()
-				pipelines := o.Pipelines.Load()
-				o.pipelineService.ExecutePipeline((*pipelines)["deploy-my-app"], pipeline.WebhookTriggerKind)
 				// [TODO] Now run pipelines affected by these changed files
 			case <-ctx.Done():
 				return

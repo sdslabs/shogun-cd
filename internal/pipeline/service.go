@@ -9,7 +9,7 @@ type PipelineService interface {
 	// Loads a pipeline from the specified yaml file path
 	LoadPipeline(f []byte) *Pipeline
 	// Executes the given pipeline with the specified trigger
-	ExecutePipeline(pipeline *Pipeline, trigger TriggerKind) bool
+	ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, variables map[string]string) bool
 }
 
 type Service struct {

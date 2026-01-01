@@ -2,7 +2,7 @@ package pipeline
 
 import pipelineSteps "github.com/kunalvirwal/shogun-cd/internal/pipeline/steps"
 
-func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind) bool {
+func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, hookValues map[string]string) bool {
 
 	// [TODO] Move this check outside to caller
 	if !pipeline.Metadata.Enabled {
@@ -10,9 +10,14 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind) bool 
 		return false
 	}
 
+	if hookValues == nil {
+		hookValues = make(map[string]string)
+	}
+
 	deps := &pipelineSteps.StepDeps{
 		Logger:     p.logger,
 		GitService: p.gitService,
+		HookValues: hookValues,
 	}
 
 	p.logger.LogInfo("Executing pipeline: %s", pipeline.Metadata.Name)

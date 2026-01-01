@@ -18,12 +18,6 @@ const (
 // If the clone fails, it returns an error
 func (s *Service) CloneRepo(ctx context.Context) error {
 
-	err := s.setGHaccount()
-	if err != nil {
-		return err
-	}
-	s.logger.Log("Github account configured")
-
 	// Check if repo exists and validate remote URL and branch
 	if s.repo.IsRepoValid(ctx, s.gitPath) {
 
@@ -72,6 +66,8 @@ func (s *Service) CloneRepo(ctx context.Context) error {
 		}
 	}
 
+	s.logger.Log("Github account configured")
+
 	// Fresh clone
 	s.logger.LogInfo("Cloning git repository: %s branch: %s to dir: %s", s.repo.URL, s.repo.Branch, s.repo.CloneDir)
 	output, err := s.repo.ExecGitCommand(ctx, s.gitPath, "clone", "-b", s.repo.Branch, s.repo.URL, s.repo.CloneDir)
@@ -87,6 +83,11 @@ func (s *Service) CloneRepo(ctx context.Context) error {
 		s.logger.Log("Git clone output: %s", string(output))
 	}
 	s.logger.LogInfo("Repository cloned successfully")
+
+	err = s.setGHaccount()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
