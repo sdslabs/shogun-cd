@@ -18,11 +18,11 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 
 	if r.DeployKeys != nil {
 		cmd.Env = append(os.Environ(),
-			"GIT_SSH_COMMAND=ssh -i "+r.DeployKeys.PrivatePath+" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new",
+			"GIT_SSH_COMMAND=ssh -i "+r.DeployKeys.PrivatePath+" -o IdentitiesOnly=yes -F /dev/null -o StrictHostKeyChecking=no",
 		)
 	} else {
 		cmd.Env = append(os.Environ(),
-			"GIT_SSH_COMMAND=ssh -o IdentitiesOnly=yes -o IdentityFile=/dev/null -o StrictHostKeyChecking=accept-new",
+			"GIT_SSH_COMMAND=ssh -o IdentitiesOnly=yes -o IdentityFile=/dev/null -F /dev/null -o StrictHostKeyChecking=no",
 		)
 	}
 

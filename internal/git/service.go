@@ -33,6 +33,8 @@ type GitService interface {
 	GetRepoRoot() string
 	// CreateAndAddDeployKey creates an SSH key pair to be added as a deploy key and and adds it to git service
 	CreateAndAddDeployKey(keyDir string) error
+	// CommitAndPushChanges commits and pushes changes to the remote repository with the specified commit message
+	CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) error
 }
 
 type Service struct {

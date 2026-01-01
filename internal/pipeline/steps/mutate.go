@@ -1,6 +1,7 @@
 package pipelineSteps
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -79,7 +80,9 @@ func (ms *MutateStep) Execute(deps *StepDeps) error {
 
 	}
 
-	deps.Logger.LogInfo("Mutate step completed successfully")
+	ctx := context.Background()
+	deps.Logger.Log("Yaml successfully mutated")
+	deps.GitService.CommitAndPushChanges(ctx, "[TEST] Replaced values via pipeline \"%s\"", deps.PipelineName)
 
 	return nil
 }

@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -159,13 +160,16 @@ func (s *Service) CloneAndStartPoller(ctx context.Context) {
 func (s *Service) Pull(ctx context.Context) error {
 	// Use atomic.bool and CAS to ensure only one pull at a time
 	if !s.pullbusy.CompareAndSwap(false, true) {
-		s.logger.Log("Pull already in progress, skipping...")
+		s.logger.Log("Pull already in queue, skipping...")
 		return nil
 	}
 
 	fileDiffs, err := func() ([]string, error) {
 
-		s.repo.mu.Lock()
+		// Try to acquire the lock without blocking to prevent goroutine queue buildup
+		if !s.repo.mu.TryLock() {
+			return nil, nil
+		}
 		defer s.repo.mu.Unlock()
 
 		s.logger.Log("Fetching repo changes...")
@@ -256,4 +260,29 @@ func (s *Service) RUnlockRepo() {
 // GetRepoRoot returns the root directory of the repository
 func (s *Service) GetRepoRoot() string {
 	return s.repo.CloneDir
+}
+
+// CommitAndPushChanges commits and pushes changes to the remote repository with the specified commit message
+// It assumes that the repository is already locked for exclusive access before calling this method
+func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) error {
+	msg := fmt.Sprintf(commitMsg, args...)
+	_, err := s.repo.ExecGitCommand(ctx, s.gitPath, "add", ".")
+	if err != nil {
+		s.logger.LogNewError("Failed to stage changes: %v", err)
+		return err
+	}
+
+	_, err = s.repo.ExecGitCommand(ctx, s.gitPath, "commit", "-m", msg)
+	if err != nil {
+		s.logger.LogNewError("Failed to commit changes: %v", err)
+		return err
+	}
+
+	_, err = s.repo.ExecGitCommand(ctx, s.gitPath, "push", "origin", s.repo.Branch)
+	if err != nil {
+		s.logger.LogNewError("Failed to push changes: %v", err)
+		return err
+	}
+	s.logger.LogInfo("Changes committed and pushed successfully")
+	return nil
 }

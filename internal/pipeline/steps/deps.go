@@ -11,9 +11,10 @@ import (
 // StepDeps represents dependencies required by pipeline steps.
 type StepDeps struct {
 	// [TODO] Git and SSH
-	Logger     utils.Logger
-	GitService git.GitService
-	HookValues map[string]string
+	PipelineName string
+	Logger       utils.Logger
+	GitService   git.GitService
+	HookValues   map[string]string
 }
 
 // InterpolateVariables replaces {{...}} patterns in the input string with values from the variables map

@@ -15,9 +15,10 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, hookV
 	}
 
 	deps := &pipelineSteps.StepDeps{
-		Logger:     p.logger,
-		GitService: p.gitService,
-		HookValues: hookValues,
+		PipelineName: pipeline.Metadata.Name,
+		Logger:       p.logger,
+		GitService:   p.gitService,
+		HookValues:   hookValues,
 	}
 
 	p.logger.LogInfo("Executing pipeline: %s", pipeline.Metadata.Name)

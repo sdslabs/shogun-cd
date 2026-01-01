@@ -2,8 +2,6 @@ package orchestrator
 
 import (
 	"context"
-
-	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 )
 
 func (o *orchestrator) Start() {
@@ -12,11 +10,13 @@ func (o *orchestrator) Start() {
 	// Clone repo and start poller
 	o.gitService.CloneAndStartPoller(ctx)
 	o.RunIndexer()
-	pipelines := o.Pipelines.Load()
+	// pipelines := o.Pipelines.Load()
 	vals := make(map[string]string)
-	vals["IMAGE"] = "mongo:latest"
+	vals["IMAGE"] = "my-web-app:v1.0.0"
+	vals["SERVICE_NAME"] = "web"
 	// [TEST] Run a pipeline
-	o.pipelineService.ExecutePipeline((*pipelines)["deploy-my-app"], pipeline.WebhookTriggerKind, vals)
+	o.logger.Log("Ran!!!!")
+	// o.pipelineService.ExecutePipeline((*pipelines)["deploy-my-app"], pipeline.WebhookTriggerKind, vals)
 
 	// Start Git Watcher
 	gitEventsChan := o.gitService.GetPullEvents()
