@@ -10,7 +10,7 @@ import (
 
 // StepDeps represents dependencies required by pipeline steps.
 type StepDeps struct {
-	// [TODO] Git and SSH
+	// [TODO] Add SSH
 	PipelineName string
 	Logger       utils.Logger
 	GitService   git.GitService

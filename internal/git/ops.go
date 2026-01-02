@@ -6,18 +6,33 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
-	GHusername = ""
-	GHemail    = ""
+	GHusername = "ShogunCD-bot"
+	GHemail    = "shogun.cd.dev@gmail.com"
 )
 
-// CloneRepo clones the git repository to the specified directory
+// Clones the repo and retries until it succeeds
+func (s *Service) Clone(ctx context.Context) {
+	// Lock repo because CloneRepo assumes exclusive access
+	s.repo.mu.Lock()
+	for {
+		err := s.cloneRepo(ctx)
+		if err == nil {
+			s.logger.Log("Git repository is cloned.")
+			break
+		}
+		s.logger.Log("Clone Failed: Retrying Clone...")
+	}
+	s.repo.mu.Unlock()
+}
+
+// cloneRepo clones the git repository to the specified directory
 // If the repository already exists, it validates the remote URL and branch or switches to the correct branch
 // If the clone fails, it returns an error
-func (s *Service) CloneRepo(ctx context.Context) error {
+// cloneRepo assumes that the repo mutex is already locked for exclusive access before calling this method
+func (s *Service) cloneRepo(ctx context.Context) error {
 
 	// Check if repo exists and validate remote URL and branch
 	if s.repo.IsRepoValid(ctx, s.gitPath) {
@@ -67,8 +82,6 @@ func (s *Service) CloneRepo(ctx context.Context) error {
 		}
 	}
 
-	s.logger.Log("Github account configured")
-
 	// Fresh clone
 	s.logger.LogInfo("Cloning git repository: %s branch: %s to dir: %s", s.repo.URL, s.repo.Branch, s.repo.CloneDir)
 	output, err := s.repo.ExecGitCommand(ctx, s.gitPath, "clone", "-b", s.repo.Branch, s.repo.URL, s.repo.CloneDir)
@@ -89,6 +102,7 @@ func (s *Service) CloneRepo(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	s.logger.Log("Github account configured")
 
 	return nil
 }
@@ -119,57 +133,14 @@ func (s *Service) ClearCacheDir() error {
 	return nil
 }
 
-func (s *Service) CloneAndStartPoller(ctx context.Context) {
-	s.repo.mu.Lock()
-	for {
-		err := s.CloneRepo(ctx)
-		if err == nil {
-			s.logger.Log("Git repository is cloned.")
-			break
-		}
-		s.logger.Log("Clone Failed: Retrying Clone...")
-	}
-	s.repo.mu.Unlock()
-
-	go func() {
-
-		s.logger.LogInfo("Starting git poller for repository: %s", s.repo.URL)
-
-		ticker := time.NewTicker(time.Duration(s.pollingInterval) * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				go func() {
-					if err := s.Pull(ctx); err != nil {
-						s.logger.LogNewError("Git pull failed: ", err)
-					}
-				}()
-			case <-ctx.Done():
-				s.logger.LogInfo("Git poller stopped.")
-				return
-			}
-		}
-	}()
-}
-
 // Pull pulls the latest changes from the remote repository
 // If there are new changes, it sends the list of changed file paths to the pull events channel
-// Pull is thread-safe and can be called concurrently
+// Pull is blocking and should be only called using the poller goroutine
 func (s *Service) Pull(ctx context.Context) error {
-	// Use atomic.bool and CAS to ensure only one pull at a time
-	if !s.pullbusy.CompareAndSwap(false, true) {
-		s.logger.Log("Pull already in queue, skipping...")
-		return nil
-	}
 
 	fileDiffs, err := func() ([]string, error) {
 
-		// Try to acquire the lock without blocking to prevent goroutine queue buildup
-		if !s.repo.mu.TryLock() {
-			return nil, nil
-		}
+		s.repo.mu.Lock()
 		defer s.repo.mu.Unlock()
 
 		s.logger.Log("Fetching repo changes...")
@@ -221,8 +192,6 @@ func (s *Service) Pull(ctx context.Context) error {
 
 	}()
 
-	s.pullbusy.Store(false)
-
 	if len(fileDiffs) > 0 {
 		select {
 		case s.pullEventsChan <- fileDiffs:
@@ -244,15 +213,17 @@ func (s *Service) LockRepo() {
 	s.repo.mu.Lock()
 }
 
-// UnlockRepo unlocks the repository
+// UnlockRepo unlocks the repository from exclusive access
 func (s *Service) UnlockRepo() {
 	s.repo.mu.Unlock()
 }
 
+// RLockRepo locks the repository for shared access
 func (s *Service) RLockRepo() {
 	s.repo.mu.RLock()
 }
 
+// RUnlockRepo unlocks the repository from shared access
 func (s *Service) RUnlockRepo() {
 	s.repo.mu.RUnlock()
 }
@@ -260,6 +231,16 @@ func (s *Service) RUnlockRepo() {
 // GetRepoRoot returns the root directory of the repository
 func (s *Service) GetRepoRoot() string {
 	return s.repo.CloneDir
+}
+
+// GetRepoURL returns the URL of the repository
+func (s *Service) GetRepoURL() string {
+	return s.repo.URL
+}
+
+// GetPollingInterval returns the polling interval in seconds
+func (s *Service) GetPollingInterval() int {
+	return s.pollingInterval
 }
 
 // CommitAndPushChanges commits and pushes changes to the remote repository with the specified commit message

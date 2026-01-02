@@ -6,17 +6,14 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
 type GitService interface {
-	// Clones a git repository to the specified destination path
-	CloneRepo(ctx context.Context) error
-	// Polls the remote repository for changes if clone succeeded outherwise retries clone
-	CloneAndStartPoller(ctx context.Context)
+	// Clones the repo and retries until it succeeds
+	Clone(ctx context.Context)
 	// Pulls the latest changes from the remote repository
 	Pull(ctx context.Context) error
 	// Returns a channel that emits pull events with changed file paths
@@ -31,8 +28,12 @@ type GitService interface {
 	RUnlockRepo()
 	// Get repo details
 	GetRepoRoot() string
+	// Get repo URL
+	GetRepoURL() string
 	// CreateAndAddDeployKey creates an SSH key pair to be added as a deploy key and and adds it to git service
 	CreateAndAddDeployKey(keyDir string) error
+	// Get Polling Interval
+	GetPollingInterval() int
 	// CommitAndPushChanges commits and pushes changes to the remote repository with the specified commit message
 	CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) error
 }
@@ -43,7 +44,6 @@ type Service struct {
 	pollingInterval int
 
 	gitPath        string
-	pullbusy       atomic.Bool
 	pullEventsChan chan []string
 }
 
@@ -52,7 +52,8 @@ type Repo struct {
 	Branch     string
 	CloneDir   string
 	DeployKeys *KeyPair
-	mu         sync.RWMutex // Mutex for synchronizing exclusive access to the repository
+	// RWMutex for synchronizing exclusive access to the repository
+	mu sync.RWMutex
 }
 
 type KeyPair struct {

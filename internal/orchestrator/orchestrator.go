@@ -1,6 +1,8 @@
 package orchestrator
 
 import (
+	"context"
+	"sync"
 	"sync/atomic"
 
 	"github.com/kunalvirwal/shogun-cd/internal/git"
@@ -10,8 +12,20 @@ import (
 )
 
 type Orchestrator interface {
+	// Starts all the necessary services and routines
 	Start()
+	// Runs the indexer to load pipelines and targets
 	RunIndexer()
+	// Run repo Poller go routine
+	StartPoller(ctx context.Context)
+	// Executes a pipeline with the given name, trigger kind, and variables
+	RunPipeline(pipelineName string, triggerKind pipeline.TriggerKind, variables map[string]string) error
+	// // Locks the piplines for running indexer and pull operations
+	// LockPipelines()
+	// // Unlocks the pipelines after running indexer and pull operations
+	// UnlockPipelines()
+
+	// Add mannual pipeline pause/resume
 }
 
 type PipelineMap map[string]*pipeline.Pipeline
@@ -25,6 +39,8 @@ type orchestrator struct {
 
 	Pipelines atomic.Pointer[PipelineMap]
 	Targets   atomic.Pointer[TargetMap]
+	// RWMutex to synchronize pipeline runs with Indexer and Pull operation
+	mu sync.RWMutex
 }
 
 func New(logger utils.Logger, gitSvc git.GitService, pipelineSvc pipeline.PipelineService, targetSvc target.TargetService) Orchestrator {
