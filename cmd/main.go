@@ -31,7 +31,7 @@ func initServices() {
 	logger.SetLevel(cfg.Debug)
 
 	// Initialize Git service
-	gitService, err := git.NewGitService(logger, cfg.GitConfig)
+	gitService, err := git.NewGitService(logger, cfg)
 	if err != nil {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
 		return

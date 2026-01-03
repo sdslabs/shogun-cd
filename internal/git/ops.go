@@ -25,6 +25,10 @@ func (s *Service) Clone(ctx context.Context) {
 		}
 		s.logger.Log("Clone Failed: Retrying Clone...")
 	}
+	err := s.setGHaccount()
+	if err != nil {
+		s.logger.LogNewError("Failed to set Github account: %v", err)
+	}
 	s.repo.mu.Unlock()
 }
 
@@ -98,12 +102,6 @@ func (s *Service) cloneRepo(ctx context.Context) error {
 	}
 	s.logger.LogInfo("Repository cloned successfully")
 
-	err = s.setGHaccount()
-	if err != nil {
-		return err
-	}
-	s.logger.Log("Github account configured")
-
 	return nil
 }
 
@@ -121,7 +119,7 @@ func (s *Service) setGHaccount() error {
 		return err
 	}
 
-	s.logger.LogInfo("Git user configured")
+	s.logger.LogInfo("Git user configured: %s <%s>", GHusername, GHemail)
 	return nil
 }
 

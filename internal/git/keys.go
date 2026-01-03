@@ -6,14 +6,13 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"golang.org/x/crypto/ssh"
 )
 
 const (
-	defaultKeyDir    = ".data/.ssh"
 	deployKeyComment = "shogun@sdslabs.co"
 )
 
@@ -26,15 +25,9 @@ func (s *Service) CreateAndAddDeployKey(keyDir string) error {
 		return err
 	}
 
-	if keyDir == "" {
-		keyDir = defaultKeyDir
-	}
-
-	keyDir = strings.TrimSuffix(keyDir, "/")
-
-	// Key file names
-	privateKeyPath := keyDir + "/deploy_id_ed25519"
-	publicKeyPath := keyDir + "/deploy_id_ed25519.pub"
+	// Key file paths wrt clone directory
+	privateKeyPath := filepath.Join(keyDir, "deploy_id_ed25519")
+	publicKeyPath := filepath.Join(keyDir, "deploy_id_ed25519.pub")
 
 	keys := &KeyPair{
 		PrivatePath: privateKeyPath,
@@ -55,6 +48,11 @@ func (s *Service) CreateAndAddDeployKey(keyDir string) error {
 	_, err1 := os.Stat(privateKeyPath)
 	_, err2 := os.Stat(publicKeyPath)
 	if err1 == nil && err2 == nil {
+		// Ensure correct permissions even if key already exists
+		if err := os.Chmod(privateKeyPath, 0600); err != nil {
+			s.logger.LogNewError("Failed to set private key permissions: %v", err)
+			return err
+		}
 		s.logger.LogInfo("Deploy key pair already exists at %s and %s", privateKeyPath, publicKeyPath)
 		s.repo.DeployKeys = keys
 		return nil

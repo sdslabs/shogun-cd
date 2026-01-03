@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +28,9 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 	}
 
 	// [TODO] Change this to streaming output
-	return cmd.CombinedOutput()
+	out, err := cmd.CombinedOutput()
+	fmt.Println(string(out))
+	return out, err
 }
 
 // IsRepoValid checks if the clone directory exists and is a valid git repository with intact working tree

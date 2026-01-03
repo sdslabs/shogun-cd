@@ -1,8 +1,7 @@
 debug: true
+data_dir: "/var/lib/shogun/" # Use absolute path
 git:
     create_deploy_key: true
-    key_dir: ".data/.ssh/"  # default: ".data/.ssh/"
     repo: "git@github.com:sdslabs/shogun-manifest-demo.git"
     branch: "main"
-    clone_dir: ".data/cache/"  # default: ".data/cache/"
     polling_interval: 5
