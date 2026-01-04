@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,7 +28,6 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 
 	// [TODO] Change this to streaming output
 	out, err := cmd.CombinedOutput()
-	fmt.Println(string(out))
 	return out, err
 }
 

@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
 const (
@@ -245,19 +247,28 @@ func (s *Service) GetPollingInterval() int {
 // It assumes that the repository is already locked for exclusive access before calling this method
 func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) error {
 	msg := fmt.Sprintf(commitMsg, args...)
-	_, err := s.repo.ExecGitCommand(ctx, s.gitPath, "add", ".")
+	out, err := s.repo.ExecGitCommand(ctx, s.gitPath, "add", ".")
+	if len(out) > 0 {
+		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+	}
 	if err != nil {
 		s.logger.LogNewError("Failed to stage changes: %v", err)
 		return err
 	}
 
-	_, err = s.repo.ExecGitCommand(ctx, s.gitPath, "commit", "-m", msg)
+	out, err = s.repo.ExecGitCommand(ctx, s.gitPath, "commit", "-m", msg)
+	if len(out) > 0 {
+		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+	}
 	if err != nil {
 		s.logger.LogNewError("Failed to commit changes: %v", err)
 		return err
 	}
 
-	_, err = s.repo.ExecGitCommand(ctx, s.gitPath, "push", "origin", s.repo.Branch)
+	out, err = s.repo.ExecGitCommand(ctx, s.gitPath, "push", "origin", s.repo.Branch)
+	if len(out) > 0 {
+		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+	}
 	if err != nil {
 		s.logger.LogNewError("Failed to push changes: %v", err)
 		return err

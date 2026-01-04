@@ -50,7 +50,7 @@ func (o *orchestrator) RunIndexer() {
 		}
 
 		if m.APIVersion != "shogun.dev/v1" {
-			o.logger.Log("Ignoring file %s with unsupported apiVersion: %s", path, m.APIVersion)
+			o.logger.Log("Ignoring file %s", path)
 			return nil // ignore non-shogun yamls
 		}
 
