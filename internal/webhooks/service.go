@@ -1,0 +1,59 @@
+package webhooks
+
+import (
+	"errors"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/kunalvirwal/shogun-cd/api/dto"
+	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
+	"github.com/kunalvirwal/shogun-cd/internal/utils"
+)
+
+var (
+	InvalidProviderError = errors.New("Provider Not Supported")
+	BadHeaderError       = errors.New("Header Not Provided")
+
+	AuthFailedError = errors.New("Payload Authentication Failed")
+
+	HookInactiveError = errors.New("Webhook Inactive")
+
+	HookNotFoundError = errors.New("Webhook Not Found")
+)
+
+type WebhookService interface {
+	Create(input *dto.HookInput) (*Webhook, error)
+	Resolve(slug string, headers http.Header, body []byte) (*Webhook, error)
+	Delete(slug string) error
+	Find(filter WebhookFilter) []*Webhook
+}
+
+type Webhook struct {
+	ID        string    `json:"-"`    // db primary key
+	Slug      string    `json:"slug"` // [TODO] indexed in db
+	Provider  Provider  `json:"hook_provider"`
+	Secret    string    `json:"-"` // HMAC secret
+	Pipeline  string    `json:"pipeline_name"`
+	Alias     string    `json:"alias"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+	// LastUsedAt *time.Time `json:"last_used"` // not a part of in memory map - [TODO] update batched data in regular intervals to the DB
+	IsActive bool `json:"is_active"`
+}
+
+type Service struct {
+	registry     map[string]*Webhook
+	orchestrator orchestrator.Orchestrator
+	logger       utils.Logger
+	mu           sync.RWMutex
+}
+
+func NewWebhookService(l utils.Logger) WebhookService {
+	// [TODO] Bulk read and sync the registry with DB
+	svc := &Service{
+		registry: make(map[string]*Webhook),
+		logger:   l,
+	}
+	return svc
+}

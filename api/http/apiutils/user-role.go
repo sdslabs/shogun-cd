@@ -1,4 +1,4 @@
-package types
+package apiutils
 
 type Role string
 

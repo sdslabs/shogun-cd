@@ -4,9 +4,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kunalvirwal/shogun-cd/api/http/request"
-	"github.com/kunalvirwal/shogun-cd/internal/types"
-	"github.com/kunalvirwal/shogun-cd/internal/utils"
+	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
 )
 
 func (m *Manager) AuthRequired(c *gin.Context) {
@@ -26,24 +24,24 @@ func (m *Manager) AuthRequired(c *gin.Context) {
 	}
 
 	tokenString := parts[1]
-	claims, err := utils.ParseToken(tokenString, m.config.ApiConfig.JWT.Secret)
+	claims, err := apiutils.ParseToken(tokenString, m.config.ApiConfig.JWT.Secret)
 	if err != nil {
 		m.response.Unauthorized(c, "Invalid or expired session", err)
 		c.Abort()
 		return
 	}
 
-	c.Set(request.ContextKeyEmail, claims.Email)
-	c.Set(request.ContextKeyRole, claims.Role)
+	c.Set(apiutils.ContextKeyEmail, claims.Email)
+	c.Set(apiutils.ContextKeyRole, claims.Role)
 
 	c.Next()
 
 }
 
 func (m *Manager) VerifyAdmin(c *gin.Context) {
-	role := request.GetUserRole(c)
+	role := apiutils.GetUserRole(c)
 
-	if role != types.RoleAdmin {
+	if role != apiutils.RoleAdmin {
 		m.response.Forbidden(c, "Access denied: Admin privileges required", nil)
 		c.Abort()
 		return

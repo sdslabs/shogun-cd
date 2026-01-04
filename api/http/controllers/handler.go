@@ -4,7 +4,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
-	"github.com/kunalvirwal/shogun-cd/webhooks"
+	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
 type Handler struct {

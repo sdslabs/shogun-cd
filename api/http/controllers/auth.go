@@ -4,15 +4,15 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kunalvirwal/shogun-cd/api/http/request"
-	"github.com/kunalvirwal/shogun-cd/internal/types"
+	"github.com/kunalvirwal/shogun-cd/api/dto"
+	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
 func (h *Handler) Login(c *gin.Context) {
-	var req request.LoginRequest
+	var req dto.LoginInput
 
-	if err := c.ShouldBind(&req); err != nil { //currently both json and form input allowed [TODO] should we only accept json?
+	if err := c.ShouldBind(&req); err != nil {
 		h.response.BadRequest(c, "Bad Input", err)
 		return
 	}
@@ -26,11 +26,11 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	//[TODO] DB call to get the user's role to be embedded in jwt.
-	role := types.RoleAdmin
+	role := apiutils.RoleAdmin
 	secret := h.config.ApiConfig.JWT.Secret
 	exp := h.config.ApiConfig.JWT.ExpirationHours
 
-	token, err := utils.GenerateToken(req.Email, role, secret, exp)
+	token, err := apiutils.GenerateToken(req.Email, role, secret, exp)
 	if err != nil {
 		h.response.ServerError(c, err)
 		return

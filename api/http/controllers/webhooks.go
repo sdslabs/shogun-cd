@@ -2,26 +2,18 @@ package controllers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kunalvirwal/shogun-cd/api/http/request"
-	"github.com/kunalvirwal/shogun-cd/webhooks"
-)
-
-const (
-	HMACHeader = "X-Hub-Signature-256"
+	"github.com/kunalvirwal/shogun-cd/api/dto"
+	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
+	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
 func (h *Handler) HandleWebhook(c *gin.Context) {
 	slug := c.Param("slug")
-
-	hook, err := h.webhook.Resolve(slug)
-	if err != nil {
-		h.response.NotFound(c, "Unable to Resolve Webhook", err)
-		return
-	}
 
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -30,31 +22,47 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-	signature := c.GetHeader(HMACHeader)
-	if signature == "" {
-		h.response.BadRequest(c, "Bad Request", fmt.Errorf("HMAC header required"))
+	hook, err := h.webhook.Resolve(slug, c.Request.Header, bodyBytes)
+	if err != nil {
+		switch {
+		case errors.Is(err, webhooks.InvalidProviderError) || errors.Is(err, webhooks.BadHeaderError):
+			h.response.BadRequest(c, err.Error(), err)
+
+		case errors.Is(err, webhooks.AuthFailedError):
+			h.response.Unauthorized(c, err.Error(), err)
+
+		case errors.Is(err, webhooks.HookInactiveError):
+			h.response.Forbidden(c, err.Error(), err)
+
+		case errors.Is(err, webhooks.HookNotFoundError):
+			h.response.NotFound(c, err.Error(), err)
+
+		default:
+			h.response.ServerError(c, err)
+		}
 		return
 	}
 
-	if !h.webhook.VerifyPayload(bodyBytes, signature, hook.Secret) {
-		h.response.Forbidden(c, "Unauthorised", fmt.Errorf("Failed to Authenticate the Payload (HMAC mismatch)"))
-		return
-	}
-
-	h.response.Success(c, fmt.Sprintf("token received - %v", slug), hook)
+	h.response.Success(c, "OK", hook)
 }
 
 func (h *Handler) CreateWebhook(c *gin.Context) {
-	pipeline := c.Param("pipeline")
-	email := request.GetUserEmail(c)
+	var req dto.HookInput
 
-	data, err := h.webhook.Create(&webhooks.WebhookInput{
-		Pipeline:  pipeline,
-		Alias:     "", // usage upto discussion
-		CreatedBy: email,
-	})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.response.BadRequest(c, "Bad Input", err)
+		return
+	}
+
+	req.CreatedBy = apiutils.GetUserEmail(c)
+	data, err := h.webhook.Create(&req)
 	if err != nil {
-		h.response.ServerError(c, err)
+		switch {
+		case errors.Is(err, webhooks.InvalidProviderError):
+			h.response.BadRequest(c, err.Error(), err)
+		default:
+			h.response.ServerError(c, err)
+		}
 		return
 	}
 
@@ -68,7 +76,7 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 
 	h.logger.LogInfo("New webhook created, pipeline: %v slug: %v", data.Pipeline, data.Slug)
 
-	h.response.Created(c, fmt.Sprintf("Webhook Created for Pipeline - %v", pipeline), response)
+	h.response.Created(c, fmt.Sprintf("Webhook Created for Pipeline - %v", req.Pipeline), response)
 }
 
 func (h *Handler) DeleteWebhook(c *gin.Context) {
@@ -76,9 +84,10 @@ func (h *Handler) DeleteWebhook(c *gin.Context) {
 
 	err := h.webhook.Delete(slug)
 	if err != nil {
-		if err.Error() == webhooks.WebhookNotFound {
-			h.response.NotFound(c, err.Error(), nil)
-		} else {
+		switch {
+		case errors.Is(err, webhooks.HookNotFoundError):
+			h.response.NotFound(c, err.Error(), err)
+		default:
 			h.response.ServerError(c, err)
 		}
 		return
@@ -87,16 +96,16 @@ func (h *Handler) DeleteWebhook(c *gin.Context) {
 	h.response.Success(c, fmt.Sprintf("Webhook - %v Deleted", slug), nil)
 }
 
-func (h *Handler) ListAllWebhooks(c *gin.Context) {
-	data := h.webhook.Find(nil)
+func (h *Handler) ListWebhooks(c *gin.Context) {
+	pipeline := c.Param("pipeline")
+	var filter webhooks.WebhookFilter
+	if pipeline == "" {
+		filter = nil
+	} else {
+		filter = webhooks.FilterByPipeline(pipeline)
+	}
+
+	data := h.webhook.Find(filter)
 
 	h.response.Success(c, "All Webhooks", data)
-}
-
-func (h *Handler) ListPipelineWebhooks(c *gin.Context) {
-	p := c.Param("pipeline")
-
-	data := h.webhook.Find(webhooks.FilterByPipeline(p))
-
-	h.response.Success(c, fmt.Sprintf("All Webhooks for Pipeline - %v", p), data)
 }

@@ -1,20 +1,19 @@
-package utils
+package apiutils
 
 import (
 	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/kunalvirwal/shogun-cd/internal/types"
 )
 
 type Claims struct {
-	Email string     `json:"email"`
-	Role  types.Role `json:"role"`
+	Email string `json:"email"`
+	Role  Role   `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(email string, role types.Role, secret string, expiry int) (string, error) {
+func GenerateToken(email string, role Role, secret string, expiry int) (string, error) {
 
 	claims := Claims{
 		Email: email,

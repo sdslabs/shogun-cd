@@ -11,16 +11,22 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 	{
 		auth.POST("/login", h.Login)
 	}
-	webhook := router.Group("/webhook")
+
+	webhook := router.Group("/hook")
 	{
+		webhook.GET("/:pipeline", m.AuthRequired, h.ListWebhooks)
+		webhook.GET("", m.AuthRequired, h.ListWebhooks)
 		webhook.POST("/:slug", h.HandleWebhook)
-		webhook.GET("", m.AuthRequired, h.ListAllWebhooks)
-		webhook.DELETE("/:slug", m.AuthRequired, m.VerifyAdmin, h.DeleteWebhook)
 	}
 
 	admin := router.Group("/admin")
 	admin.Use(m.AuthRequired, m.VerifyAdmin)
 	{
+		webhook := admin.Group("/hook")
+		{
+			webhook.POST("", h.CreateWebhook)
+			webhook.DELETE("/:slug", h.DeleteWebhook)
+		}
 		key := admin.Group("/api-keys")
 		{
 			key.POST("", h.CreateAPIKey)
@@ -46,12 +52,6 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 	pipelines := router.Group("/pipelines/:pipeline")
 	pipelines.Use(m.AuthRequired)
 	{
-		webhooks := pipelines.Group("/webhooks")
-		{
-			webhooks.GET("", h.ListPipelineWebhooks)
-			webhooks.POST("", h.CreateWebhook)
-		}
-
 		runs := pipelines.Group("/runs")
 		{
 			runs.GET("", h.ListPipelineRuns)

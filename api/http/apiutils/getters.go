@@ -1,8 +1,7 @@
-package request
+package apiutils
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/kunalvirwal/shogun-cd/internal/types"
 )
 
 const (
@@ -18,12 +17,12 @@ func GetUserEmail(c *gin.Context) string {
 	return value.(string)
 }
 
-func GetUserRole(c *gin.Context) types.Role {
+func GetUserRole(c *gin.Context) Role {
 	value, exists := c.Get(ContextKeyRole)
 	if !exists {
 		return ""
 	}
-	role := value.(types.Role)
+	role := value.(Role)
 	if _, ok := role.ValidRole(); ok {
 		return role
 	}

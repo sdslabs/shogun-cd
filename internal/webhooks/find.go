@@ -1,12 +1,14 @@
 package webhooks
 
-func (s *service) Find(filter func(*Webhook) bool) []*Webhook {
+type WebhookFilter func(*Webhook) bool
+
+func (s *Service) Find(filter WebhookFilter) []*Webhook {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	results := make([]*Webhook, 0)
 
-	for _, w := range s.cache {
+	for _, w := range s.registry {
 		if filter == nil || filter(w) {
 			results = append(results, w)
 		}
@@ -15,7 +17,7 @@ func (s *service) Find(filter func(*Webhook) bool) []*Webhook {
 	return results
 }
 
-func FilterByPipeline(pipeline string) func(*Webhook) bool {
+func FilterByPipeline(pipeline string) WebhookFilter {
 	return func(w *Webhook) bool {
 		return w.Pipeline == pipeline
 	}
