@@ -50,10 +50,9 @@ func initServices() {
 
 	_ = app
 
-	webhook := webhooks.NewWebhookService(logger)
+	webhook := webhooks.NewWebhookService(logger, orch)
 
-	go api.StartAPIServer(logger, cfg, webhook) // Block Forever.
-	// [TODO] implement error channel
+	go api.StartAPIServer(logger, cfg, webhook)
 
 	<-make(chan struct{}) // Block forever
 }

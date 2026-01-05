@@ -22,11 +22,14 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-	hook, err := h.webhook.Resolve(slug, c.Request.Header, bodyBytes)
+	_, err = h.webhook.Resolve(slug, c.Request.Header, bodyBytes)
 	if err != nil {
 		switch {
 		case errors.Is(err, webhooks.InvalidProviderError) || errors.Is(err, webhooks.BadHeaderError):
 			h.response.BadRequest(c, err.Error(), err)
+
+		case errors.Is(err, webhooks.InvalidJSONError):
+			h.response.BadRequest(c, webhooks.InvalidJSONError.Error(), err)
 
 		case errors.Is(err, webhooks.AuthFailedError):
 			h.response.Unauthorized(c, err.Error(), err)
@@ -43,7 +46,7 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 		return
 	}
 
-	h.response.Success(c, "OK", hook)
+	h.response.Success(c, "OK", nil)
 }
 
 func (h *Handler) CreateWebhook(c *gin.Context) {

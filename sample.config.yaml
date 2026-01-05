@@ -5,3 +5,11 @@ git:
     repo: "git@github.com:sdslabs/shogun-manifest-demo.git"
     branch: "main"
     polling_interval: 5
+api:
+    admin:
+        email: "captainav0608@gmail.com"
+        password: "password"
+    port: 7007
+    jwt:
+        secret: "jwt-secret"
+        expiration_hours: 1

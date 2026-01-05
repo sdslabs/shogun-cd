@@ -11,8 +11,16 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
+type WebhookService interface {
+	Create(input *dto.HookInput) (*Webhook, error)
+	Resolve(slug string, headers http.Header, body []byte) (*Webhook, error)
+	Delete(slug string) error
+	Find(filter WebhookFilter) []*Webhook
+}
+
 var (
 	InvalidProviderError = errors.New("Provider Not Supported")
+	InvalidJSONError     = errors.New("Bad JSON Payload")
 	BadHeaderError       = errors.New("Header Not Provided")
 
 	AuthFailedError = errors.New("Payload Authentication Failed")
@@ -21,13 +29,6 @@ var (
 
 	HookNotFoundError = errors.New("Webhook Not Found")
 )
-
-type WebhookService interface {
-	Create(input *dto.HookInput) (*Webhook, error)
-	Resolve(slug string, headers http.Header, body []byte) (*Webhook, error)
-	Delete(slug string) error
-	Find(filter WebhookFilter) []*Webhook
-}
 
 type Webhook struct {
 	ID        string    `json:"-"`    // db primary key
@@ -49,11 +50,12 @@ type Service struct {
 	mu           sync.RWMutex
 }
 
-func NewWebhookService(l utils.Logger) WebhookService {
+func NewWebhookService(l utils.Logger, o orchestrator.Orchestrator) WebhookService {
 	// [TODO] Bulk read and sync the registry with DB
 	svc := &Service{
-		registry: make(map[string]*Webhook),
-		logger:   l,
+		registry:     make(map[string]*Webhook),
+		orchestrator: o,
+		logger:       l,
 	}
 	return svc
 }

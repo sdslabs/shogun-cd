@@ -39,17 +39,21 @@ func (s *Service) Create(input *dto.HookInput) (*Webhook, error) {
 		CreatedAt: time.Now(),
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	for {
 		temp, _ := generateSecretHex(SlugEntropy)
 		newSlug := prefix + temp
-		if _, exists := s.registry[newSlug]; !exists {
-			hook.Slug = newSlug
-			s.registry[newSlug] = hook
-			return hook, nil
+
+		s.mu.Lock()
+		if _, exists := s.registry[newSlug]; exists {
+			s.mu.Unlock()
+			s.logger.LogInfo("Slug collision, Retrying")
+			continue
 		}
-		s.logger.LogInfo("Slug collision, Retrying")
+		hook.Slug = newSlug
+		s.registry[newSlug] = hook
+
+		s.mu.Unlock()
+		return hook, nil
 	}
 }
 
