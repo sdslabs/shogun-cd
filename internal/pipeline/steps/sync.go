@@ -26,5 +26,6 @@ func (ss *SyncStep) TargetInstance() string {
 }
 
 func (ss *SyncStep) Execute(deps *StepDeps) error {
+	deps.Logger.Log("Executed sync step")
 	return nil
 }

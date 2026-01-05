@@ -1,6 +1,7 @@
 debug: true
+data_dir: "/var/lib/shogun/" # Use absolute path
 git:
-    clone_dir: "./cache/"
+    create_deploy_key: true
     repo: "git@github.com:sdslabs/shogun-manifest-demo.git"
     branch: "main"
     polling_interval: 5
