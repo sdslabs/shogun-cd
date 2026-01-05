@@ -16,8 +16,19 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 		cmd.Dir = r.CloneDir
 	}
 
+	if r.DeployKeys != nil {
+		cmd.Env = append(os.Environ(),
+			"GIT_SSH_COMMAND=ssh -i "+r.DeployKeys.PrivatePath+" -o IdentitiesOnly=yes -F /dev/null -o StrictHostKeyChecking=no",
+		)
+	} else {
+		cmd.Env = append(os.Environ(),
+			"GIT_SSH_COMMAND=ssh -o IdentitiesOnly=yes -o IdentityFile=/dev/null -F /dev/null -o StrictHostKeyChecking=no",
+		)
+	}
+
 	// [TODO] Change this to streaming output
-	return cmd.CombinedOutput()
+	out, err := cmd.CombinedOutput()
+	return out, err
 }
 
 // IsRepoValid checks if the clone directory exists and is a valid git repository with intact working tree

@@ -1,5 +1,8 @@
 .idea
 cache/
-tmp/
-config.yaml
 .data/
+config.yaml
+Dockerfile
+ssh/
+.ssh/
+tmp/

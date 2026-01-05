@@ -2,16 +2,43 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
-	"time"
+
+	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
-// CloneRepo clones the git repository to the specified directory
+const (
+	GHusername = "ShogunCD-bot"
+	GHemail    = "shogun.cd.dev@gmail.com"
+)
+
+// Clones the repo and retries until it succeeds
+func (s *Service) Clone(ctx context.Context) {
+	// Lock repo because CloneRepo assumes exclusive access
+	s.repo.mu.Lock()
+	for {
+		err := s.cloneRepo(ctx)
+		if err == nil {
+			s.logger.Log("Git repository is cloned.")
+			break
+		}
+		s.logger.Log("Clone Failed: Retrying Clone...")
+	}
+	err := s.setGHaccount()
+	if err != nil {
+		s.logger.LogNewError("Failed to set Github account: %v", err)
+	}
+	s.repo.mu.Unlock()
+}
+
+// cloneRepo clones the git repository to the specified directory
 // If the repository already exists, it validates the remote URL and branch or switches to the correct branch
 // If the clone fails, it returns an error
-func (s *Service) CloneRepo(ctx context.Context) error {
+// cloneRepo assumes that the repo mutex is already locked for exclusive access before calling this method
+func (s *Service) cloneRepo(ctx context.Context) error {
 
 	// Check if repo exists and validate remote URL and branch
 	if s.repo.IsRepoValid(ctx, s.gitPath) {
@@ -80,6 +107,24 @@ func (s *Service) CloneRepo(ctx context.Context) error {
 	return nil
 }
 
+func (s *Service) setGHaccount() error {
+
+	_, err := s.repo.ExecGitCommand(context.Background(), s.gitPath, "config", "user.name", GHusername)
+	if err != nil {
+		s.logger.LogNewError("Failed to set git username: %v", err)
+		return err
+	}
+
+	_, err = s.repo.ExecGitCommand(context.Background(), s.gitPath, "config", "user.email", GHemail)
+	if err != nil {
+		s.logger.LogNewError("Failed to set git email: %v", err)
+		return err
+	}
+
+	s.logger.LogInfo("Git user configured: %s <%s>", GHusername, GHemail)
+	return nil
+}
+
 func (s *Service) ClearCacheDir() error {
 	if err := os.RemoveAll(s.repo.CloneDir); err != nil {
 		s.logger.LogNewError("Failed to remove directory: %v", err)
@@ -88,50 +133,10 @@ func (s *Service) ClearCacheDir() error {
 	return nil
 }
 
-func (s *Service) CloneAndStartPoller(ctx context.Context) {
-	s.repo.mu.Lock()
-	for {
-		err := s.CloneRepo(ctx)
-		if err == nil {
-			s.logger.Log("Git repository is cloned.")
-			break
-		}
-		s.logger.Log("Clone Failed: Retrying Clone...")
-	}
-	s.repo.mu.Unlock()
-
-	go func() {
-
-		s.logger.LogInfo("Starting git poller for repository: %s", s.repo.URL)
-
-		ticker := time.NewTicker(time.Duration(s.pollingInterval) * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				go func() {
-					if err := s.Pull(ctx); err != nil {
-						s.logger.LogNewError("Git pull failed: ", err)
-					}
-				}()
-			case <-ctx.Done():
-				s.logger.LogInfo("Git poller stopped.")
-				return
-			}
-		}
-	}()
-}
-
 // Pull pulls the latest changes from the remote repository
 // If there are new changes, it sends the list of changed file paths to the pull events channel
-// Pull is thread-safe and can be called concurrently
+// Pull is blocking and should be only called using the poller goroutine
 func (s *Service) Pull(ctx context.Context) error {
-	// Use atomic.bool and CAS to ensure only one pull at a time
-	if !s.pullbusy.CompareAndSwap(false, true) {
-		s.logger.Log("Pull already in progress, skipping...")
-		return nil
-	}
 
 	fileDiffs, err := func() ([]string, error) {
 
@@ -187,8 +192,6 @@ func (s *Service) Pull(ctx context.Context) error {
 
 	}()
 
-	s.pullbusy.Store(false)
-
 	if len(fileDiffs) > 0 {
 		select {
 		case s.pullEventsChan <- fileDiffs:
@@ -210,15 +213,17 @@ func (s *Service) LockRepo() {
 	s.repo.mu.Lock()
 }
 
-// UnlockRepo unlocks the repository
+// UnlockRepo unlocks the repository from exclusive access
 func (s *Service) UnlockRepo() {
 	s.repo.mu.Unlock()
 }
 
+// RLockRepo locks the repository for shared access
 func (s *Service) RLockRepo() {
 	s.repo.mu.RLock()
 }
 
+// RUnlockRepo unlocks the repository from shared access
 func (s *Service) RUnlockRepo() {
 	s.repo.mu.RUnlock()
 }
@@ -226,4 +231,48 @@ func (s *Service) RUnlockRepo() {
 // GetRepoRoot returns the root directory of the repository
 func (s *Service) GetRepoRoot() string {
 	return s.repo.CloneDir
+}
+
+// GetRepoURL returns the URL of the repository
+func (s *Service) GetRepoURL() string {
+	return s.repo.URL
+}
+
+// GetPollingInterval returns the polling interval in seconds
+func (s *Service) GetPollingInterval() int {
+	return s.pollingInterval
+}
+
+// CommitAndPushChanges commits and pushes changes to the remote repository with the specified commit message
+// It assumes that the repository is already locked for exclusive access before calling this method
+func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) error {
+	msg := fmt.Sprintf(commitMsg, args...)
+	out, err := s.repo.ExecGitCommand(ctx, s.gitPath, "add", ".")
+	if len(out) > 0 {
+		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+	}
+	if err != nil {
+		s.logger.LogNewError("Failed to stage changes: %v", err)
+		return err
+	}
+
+	out, err = s.repo.ExecGitCommand(ctx, s.gitPath, "commit", "-m", msg)
+	if len(out) > 0 {
+		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+	}
+	if err != nil {
+		s.logger.LogNewError("Failed to commit changes: %v", err)
+		return err
+	}
+
+	out, err = s.repo.ExecGitCommand(ctx, s.gitPath, "push", "origin", s.repo.Branch)
+	if len(out) > 0 {
+		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+	}
+	if err != nil {
+		s.logger.LogNewError("Failed to push changes: %v", err)
+		return err
+	}
+	s.logger.LogInfo("Changes committed and pushed successfully")
+	return nil
 }

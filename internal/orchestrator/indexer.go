@@ -20,8 +20,15 @@ type Meta struct {
 // Indexer aquires a write lock on the git repo while indexing
 func (o *orchestrator) RunIndexer() {
 	o.logger.LogInfo("Running Indexer...")
-	o.gitService.LockRepo()
-	defer o.gitService.UnlockRepo()
+
+	// Take pipline lock prior to repo lock to avoid deadlocks
+	// Similar order should be followed in other places where both locks are taken like mutate steps in pipeline execution
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	// Repo RLock so that the repo can't update while indexing
+	o.gitService.RLockRepo()
+	defer o.gitService.RUnlockRepo()
 
 	pm := make(PipelineMap)
 	tm := make(TargetMap)
@@ -43,7 +50,7 @@ func (o *orchestrator) RunIndexer() {
 		}
 
 		if m.APIVersion != "shogun.dev/v1" {
-			o.logger.Log("Ignoring file %s with unsupported apiVersion: %s", path, m.APIVersion)
+			o.logger.Log("Ignoring file %s", path)
 			return nil // ignore non-shogun yamls
 		}
 

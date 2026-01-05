@@ -1,13 +1,14 @@
 package config
 
 type Config struct {
-	Debug     bool `yaml:"debug"`
-	GitConfig Git  `yaml:"git"`
-	ApiConfig Api  `yaml:"api"`
+	Debug     bool   `yaml:"debug"`
+	GitConfig Git    `yaml:"git"`
+	ApiConfig Api    `yaml:"api"`
+	DataDir   string `yaml:"data_dir"`
 }
 
 type Git struct {
-	CloneDir        string `yaml:"clone_dir"`
+	CreateDeployKey bool   `yaml:"create_deploy_key"`
 	Repo            string `yaml:"repo"`
 	Branch          string `yaml:"branch"`
 	PollingInterval int    `yaml:"polling_interval"`
