@@ -25,19 +25,19 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 	_, err = h.webhook.Resolve(slug, c.Request.Header, bodyBytes)
 	if err != nil {
 		switch {
-		case errors.Is(err, webhooks.InvalidProviderError) || errors.Is(err, webhooks.BadHeaderError):
+		case errors.Is(err, webhooks.ErrBadWebhookHeader):
 			h.response.BadRequest(c, err.Error(), err)
 
-		case errors.Is(err, webhooks.InvalidJSONError):
-			h.response.BadRequest(c, webhooks.InvalidJSONError.Error(), err)
+		case errors.Is(err, webhooks.ErrInvalidJSON):
+			h.response.BadRequest(c, webhooks.ErrInvalidJSON.Error(), err)
 
-		case errors.Is(err, webhooks.AuthFailedError):
+		case errors.Is(err, webhooks.ErrAuthFailed):
 			h.response.Unauthorized(c, err.Error(), err)
 
-		case errors.Is(err, webhooks.HookInactiveError):
+		case errors.Is(err, webhooks.ErrHookInactive):
 			h.response.Forbidden(c, err.Error(), err)
 
-		case errors.Is(err, webhooks.HookNotFoundError):
+		case errors.Is(err, webhooks.ErrHookNotFound):
 			h.response.NotFound(c, err.Error(), err)
 
 		default:
@@ -60,12 +60,7 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 	req.CreatedBy = apiutils.GetUserEmail(c)
 	data, err := h.webhook.Create(&req)
 	if err != nil {
-		switch {
-		case errors.Is(err, webhooks.InvalidProviderError):
-			h.response.BadRequest(c, err.Error(), err)
-		default:
-			h.response.ServerError(c, err)
-		}
+		h.response.ServerError(c, err)
 		return
 	}
 
@@ -88,7 +83,7 @@ func (h *Handler) DeleteWebhook(c *gin.Context) {
 	err := h.webhook.Delete(slug)
 	if err != nil {
 		switch {
-		case errors.Is(err, webhooks.HookNotFoundError):
+		case errors.Is(err, webhooks.ErrHookNotFound):
 			h.response.NotFound(c, err.Error(), err)
 		default:
 			h.response.ServerError(c, err)

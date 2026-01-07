@@ -6,7 +6,7 @@ func (s *Service) Delete(slug string) error {
 	defer s.mu.Unlock()
 
 	if _, exists := s.registry[slug]; !exists {
-		return HookNotFoundError
+		return ErrHookNotFound
 	}
 
 	delete(s.registry, slug)

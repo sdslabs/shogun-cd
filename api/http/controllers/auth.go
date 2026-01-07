@@ -1,12 +1,12 @@
 package controllers
 
 import (
+	"crypto/subtle"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
-	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
 func (h *Handler) Login(c *gin.Context) {
@@ -18,8 +18,8 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	//[TODO] multi user support through DB lookup
-	validEmail := utils.SecureCompare(req.Email, h.config.ApiConfig.Admin.Email)
-	validPassword := utils.SecureCompare(req.Password, h.config.ApiConfig.Admin.Password)
+	validEmail := subtle.ConstantTimeCompare([]byte(req.Email), []byte(h.config.ApiConfig.Admin.Email)) == 1
+	validPassword := subtle.ConstantTimeCompare([]byte(req.Password), []byte(h.config.ApiConfig.Admin.Password)) == 1
 	if !validEmail || !validPassword {
 		h.response.Unauthorized(c, "Invalid Email or Password", nil)
 		return

@@ -37,7 +37,7 @@ func newRouter() *gin.Engine {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"}, //[TODO] tighten allowed origins
 		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"}, //[TODO] add HMAC headers for browser
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))

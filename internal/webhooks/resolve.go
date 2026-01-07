@@ -16,11 +16,11 @@ func (s *Service) Resolve(slug string, headers http.Header, body []byte) (*Webho
 	s.mu.RUnlock()
 
 	if !exists {
-		return nil, HookNotFoundError
+		return nil, ErrHookNotFound
 	}
 
 	if !hook.IsActive {
-		return nil, HookInactiveError
+		return nil, ErrHookInactive
 	}
 
 	ok, err := hook.VerifyPayload(headers, body)
@@ -28,22 +28,21 @@ func (s *Service) Resolve(slug string, headers http.Header, body []byte) (*Webho
 		return nil, err
 	}
 	if !ok {
-		return nil, AuthFailedError
+		return nil, ErrAuthFailed
 	}
 
 	vals := make(map[string]string) // currently accepts flattened json
 	err = json.Unmarshal(body, &vals)
 	if err != nil {
-		return nil, fmt.Errorf("%w : %v", InvalidJSONError, err)
+		return nil, fmt.Errorf("%w : %v", ErrInvalidJSON, err)
 	}
 
 	p := hook.Pipeline
-	go func(p string, vals map[string]string) {
-		s.logger.LogInfo("Webhook triggers pipeline : %v", p)
-		if err := s.orchestrator.RunPipeline(p, pipeline.WebhookTriggerKind, vals); err != nil {
-			s.logger.LogError(err)
-		}
-	}(p, vals)
+	s.logger.LogInfo("Webhook triggers pipeline : %v", p)
+	if err := s.orchestrator.RunPipeline(p, pipeline.WebhookTriggerKind, vals); err != nil {
+		s.logger.LogError(err)
+		return nil, err
+	}
 
 	return hook, nil
 }

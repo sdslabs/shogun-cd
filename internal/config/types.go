@@ -2,9 +2,9 @@ package config
 
 type Config struct {
 	Debug     bool   `yaml:"debug"`
+	DataDir   string `yaml:"data_dir"`
 	GitConfig Git    `yaml:"git"`
 	ApiConfig Api    `yaml:"api"`
-	DataDir   string `yaml:"data_dir"`
 }
 
 type Git struct {

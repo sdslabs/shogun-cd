@@ -18,10 +18,7 @@ func (s *Service) Create(input *dto.HookInput) (*Webhook, error) {
 	var secret string
 	var err error
 
-	provider, ok := Provider(input.Provider).ValidProvider()
-	if !ok {
-		return nil, InvalidProviderError
-	}
+	// [TODO] check if given pipeline is valid
 
 	secret, err = generateSecretHex(SecretEntropy) // hex: composed of 0-9 and a-f
 	if err != nil {
@@ -30,7 +27,6 @@ func (s *Service) Create(input *dto.HookInput) (*Webhook, error) {
 
 	hook := &Webhook{
 		Slug:      "",
-		Provider:  provider,
 		Secret:    secret,
 		Pipeline:  input.Pipeline,
 		Alias:     input.Alias,

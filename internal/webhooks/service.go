@@ -19,22 +19,17 @@ type WebhookService interface {
 }
 
 var (
-	InvalidProviderError = errors.New("Provider Not Supported")
-	InvalidJSONError     = errors.New("Bad JSON Payload")
-	BadHeaderError       = errors.New("Header Not Provided")
-
-	AuthFailedError = errors.New("Payload Authentication Failed")
-
-	HookInactiveError = errors.New("Webhook Inactive")
-
-	HookNotFoundError = errors.New("Webhook Not Found")
+	ErrInvalidJSON      = errors.New("Bad JSON Payload")
+	ErrBadWebhookHeader = errors.New("No Supported Auth header found")
+	ErrAuthFailed       = errors.New("Payload Authentication Failed")
+	ErrHookInactive     = errors.New("Webhook Inactive")
+	ErrHookNotFound     = errors.New("Webhook Not Found")
 )
 
 type Webhook struct {
 	ID        string    `json:"-"`    // db primary key
 	Slug      string    `json:"slug"` // [TODO] indexed in db
-	Provider  Provider  `json:"hook_provider"`
-	Secret    string    `json:"-"` // HMAC secret
+	Secret    string    `json:"-"`    // hook secret
 	Pipeline  string    `json:"pipeline_name"`
 	Alias     string    `json:"alias"`
 	CreatedBy string    `json:"created_by"`
