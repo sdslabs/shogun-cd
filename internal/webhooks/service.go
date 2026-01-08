@@ -21,6 +21,7 @@ type WebhookService interface {
 var (
 	ErrInvalidJSON      = errors.New("Bad JSON Payload")
 	ErrBadWebhookHeader = errors.New("No Supported Auth header found")
+	ErrInvalidPipeline  = errors.New("Pipeline Does Not Exist")
 	ErrAuthFailed       = errors.New("Payload Authentication Failed")
 	ErrHookInactive     = errors.New("Webhook Inactive")
 	ErrHookNotFound     = errors.New("Webhook Not Found")

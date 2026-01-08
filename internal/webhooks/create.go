@@ -18,7 +18,9 @@ func (s *Service) Create(input *dto.HookInput) (*Webhook, error) {
 	var secret string
 	var err error
 
-	// [TODO] check if given pipeline is valid
+	if !s.orchestrator.PipelineExists(input.Pipeline) {
+		return nil, ErrInvalidPipeline
+	}
 
 	secret, err = generateSecretHex(SecretEntropy) // hex: composed of 0-9 and a-f
 	if err != nil {

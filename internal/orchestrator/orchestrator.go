@@ -20,6 +20,8 @@ type Orchestrator interface {
 	StartPoller(ctx context.Context)
 	// Executes a pipeline with the given name, trigger kind, and variables
 	RunPipeline(pipelineName string, triggerKind pipeline.TriggerKind, variables map[string]string) error
+	// Checks if a pipeline with a given name exists
+	PipelineExists(pipelineName string) bool
 	// // Locks the piplines for running indexer and pull operations
 	// LockPipelines()
 	// // Unlocks the pipelines after running indexer and pull operations

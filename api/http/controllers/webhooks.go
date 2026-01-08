@@ -60,7 +60,13 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 	req.CreatedBy = apiutils.GetUserEmail(c)
 	data, err := h.webhook.Create(&req)
 	if err != nil {
-		h.response.ServerError(c, err)
+		switch {
+		case errors.Is(err, webhooks.ErrInvalidPipeline):
+			h.response.BadRequest(c, err.Error(), err)
+
+		default:
+			h.response.ServerError(c, err)
+		}
 		return
 	}
 

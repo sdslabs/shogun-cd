@@ -11,9 +11,7 @@ import (
 func (o *orchestrator) RunPipeline(pipelineName string, triggerKind pipeline.TriggerKind, variables map[string]string) error {
 
 	// Fast fail
-	pipelines := o.Pipelines.Load()
-	_, exists := (*pipelines)[pipelineName]
-	if !exists {
+	if !o.PipelineExists(pipelineName) {
 		o.logger.Log("Pipeline not found: " + pipelineName)
 		return fmt.Errorf("pipeline not found: %s", pipelineName)
 	}
@@ -50,4 +48,11 @@ func (o *orchestrator) LockPipelines() {
 // UnlockPipelines unlocks the orchestrator's pipeline mutex after indexer and pull operations
 func (o *orchestrator) UnlockPipelines() {
 	o.mu.Unlock()
+}
+
+// PipelineExists checks if a pipeline with the given name exists
+func (o *orchestrator) PipelineExists(pipelineName string) bool {
+	pipelines := o.Pipelines.Load()
+	_, exists := (*pipelines)[pipelineName]
+	return exists
 }

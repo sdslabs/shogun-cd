@@ -26,6 +26,7 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		{
 			webhook.POST("", h.CreateWebhook)
 			webhook.DELETE("/:slug", h.DeleteWebhook)
+			// [TODO] deactivate a webhook
 		}
 		key := admin.Group("/api-keys")
 		{
