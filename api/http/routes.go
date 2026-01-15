@@ -28,12 +28,15 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 			webhook.DELETE("/:slug", h.DeleteWebhook)
 			// [TODO] deactivate a webhook
 		}
+
+		// [TODO] api key routes are not implemented yet
 		key := admin.Group("/api-keys")
 		{
 			key.POST("", h.CreateAPIKey)
 			key.GET("", h.ListAllAPIKeys)
 			key.DELETE("/:key", h.DeleteAPIKey)
 		}
+		// [TODO] secrets routes are not implemented yet
 		secret := admin.Group("/secrets")
 		{
 			secret.GET("", h.ListAllSecrets)
@@ -43,6 +46,7 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		}
 	}
 
+	// [TODO] system routes are not implemented yet
 	system := router.Group("/system")
 	system.Use(m.AuthRequired)
 	{
@@ -50,6 +54,7 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		system.GET("/pipelines", h.ListAllPipelines)
 	}
 
+	// [TODO] pipeline data routes are not implemented yet
 	pipelines := router.Group("/pipelines/:pipeline")
 	pipelines.Use(m.AuthRequired)
 	{
