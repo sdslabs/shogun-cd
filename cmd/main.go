@@ -1,6 +1,7 @@
 package main
 
 import (
+	api "github.com/kunalvirwal/shogun-cd/api/http"
 	"github.com/kunalvirwal/shogun-cd/internal/app"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/git"
@@ -8,11 +9,11 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
+	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
 func main() {
 	initServices()
-	// api.StartAPIServer()
 	// pipeline.LoadPipeline("./examples/pipeline.yaml")
 }
 
@@ -25,7 +26,6 @@ func initServices() {
 	cfg, err := config.LoadConfigs(logger)
 	if err != nil {
 		logger.LogNewError("Invalid config: Stopping Shogun...")
-		return
 	}
 
 	logger.SetLevel(cfg.Debug)
@@ -34,7 +34,6 @@ func initServices() {
 	gitService, err := git.NewGitService(logger, cfg)
 	if err != nil {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
-		return
 	}
 
 	// Initialize Pipeline service
@@ -51,6 +50,9 @@ func initServices() {
 
 	_ = app
 
-	<-make(chan struct{}) // Block forever
+	webhook := webhooks.NewWebhookService(logger, orch)
 
+	go api.StartAPIServer(logger, cfg, webhook)
+
+	<-make(chan struct{}) // Block forever
 }
