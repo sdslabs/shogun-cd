@@ -16,6 +16,7 @@ type WebhookService interface {
 	Resolve(slug string, headers http.Header, body []byte) (*Webhook, error)
 	Delete(slug string) error
 	Find(filter WebhookFilter) []*Webhook
+	SetStatus(slug string, isActive bool) error
 }
 
 var (

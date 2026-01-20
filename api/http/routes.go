@@ -25,8 +25,9 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		webhook := admin.Group("/hook")
 		{
 			webhook.POST("", h.CreateWebhook)
+			webhook.PATCH("/:slug/pause", h.DeactivateWebhook)
+			webhook.PATCH("/:slug/resume", h.ActivateWebhook)
 			webhook.DELETE("/:slug", h.DeleteWebhook)
-			// [TODO] deactivate a webhook
 		}
 
 		// [TODO] api key routes are not implemented yet

@@ -88,12 +88,7 @@ func (h *Handler) DeleteWebhook(c *gin.Context) {
 
 	err := h.webhook.Delete(slug)
 	if err != nil {
-		switch {
-		case errors.Is(err, webhooks.ErrHookNotFound):
-			h.response.NotFound(c, err.Error(), err)
-		default:
-			h.response.ServerError(c, err)
-		}
+		h.response.ServerError(c, err)
 		return
 	}
 
@@ -112,4 +107,28 @@ func (h *Handler) ListWebhooks(c *gin.Context) {
 	data := h.webhook.Find(filter)
 
 	h.response.Success(c, "All Webhooks", data)
+}
+
+func (h *Handler) DeactivateWebhook(c *gin.Context) {
+	slug := c.Param("slug")
+
+	err := h.webhook.SetStatus(slug, false)
+	if err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
+	h.response.Success(c, "Hook Deactivated", nil)
+}
+
+func (h *Handler) ActivateWebhook(c *gin.Context) {
+	slug := c.Param("slug")
+
+	err := h.webhook.SetStatus(slug, true)
+	if err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
+	h.response.Success(c, "Hook Activated", nil)
 }
