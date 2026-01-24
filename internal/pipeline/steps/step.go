@@ -1,6 +1,7 @@
 package pipelineSteps
 
 import (
+	"context"
 	"fmt"
 
 	"go.yaml.in/yaml/v3"
@@ -22,7 +23,7 @@ type Step interface {
 	// Returns the trigger condition of the step
 	Trigger() string
 	// Runs the step execution logic
-	Execute(deps *StepDeps) error
+	Execute(ctx context.Context, deps *StepDeps) error
 }
 
 // UnmarshalYAML is an interface hook for custom unmarshaling of StepWrapper

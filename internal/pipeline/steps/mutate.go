@@ -31,7 +31,7 @@ func (ms *MutateStep) Trigger() string {
 }
 
 // Only POSIX compliant
-func (ms *MutateStep) Execute(deps *StepDeps) error {
+func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) error {
 	deps.GitService.LockRepo()
 	defer deps.GitService.UnlockRepo()
 
@@ -80,7 +80,6 @@ func (ms *MutateStep) Execute(deps *StepDeps) error {
 
 	}
 
-	ctx := context.Background()
 	deps.Logger.Log("Yaml successfully mutated")
 	deps.GitService.CommitAndPushChanges(ctx, "[TEST] Replaced values via pipeline \"%s\"", deps.PipelineName)
 

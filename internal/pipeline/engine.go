@@ -1,8 +1,14 @@
 package pipeline
 
-import pipelineSteps "github.com/kunalvirwal/shogun-cd/internal/pipeline/steps"
+import (
+	"context"
 
-func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, hookValues map[string]string) bool {
+	pipelineSteps "github.com/kunalvirwal/shogun-cd/internal/pipeline/steps"
+	"github.com/kunalvirwal/shogun-cd/internal/sshclient"
+	"github.com/kunalvirwal/shogun-cd/internal/target"
+)
+
+func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targets map[string]*target.Target, hookValues map[string]string) bool {
 
 	// [TODO] Move this check outside to caller
 	if !pipeline.Metadata.Enabled {
@@ -15,13 +21,20 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, hookV
 	}
 
 	deps := &pipelineSteps.StepDeps{
-		PipelineName: pipeline.Metadata.Name,
-		Logger:       p.logger,
-		GitService:   p.gitService,
-		HookValues:   hookValues,
+		PipelineName:  pipeline.Metadata.Name,
+		Logger:        p.logger,
+		GitService:    p.gitService,
+		SecretService: p.secretService,
+		Targets:       targets,
+		HookValues:    hookValues,
+		SSHManager:    sshclient.NewSSHManager(),
 	}
 
+	// SSH Client cleanup after pipeline execution only if SSHManager was initialized
+	defer deps.SSHManager.CleanupSSHClients()
+
 	p.logger.LogInfo("Executing pipeline: %s", pipeline.Metadata.Name)
+	ctx := context.Background()
 	for i, sw := range pipeline.Spec.Steps {
 
 		step := sw.Step
@@ -32,7 +45,7 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, hookV
 			continue
 		}
 
-		err := step.Execute(deps)
+		err := step.Execute(ctx, deps)
 		if err != nil {
 			p.logger.LogNewError("Step %d failed: %v", i+1, err)
 			return false
@@ -40,5 +53,6 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, hookV
 		p.logger.Log("Step %d executed successfully", i+1)
 
 	}
+
 	return true
 }

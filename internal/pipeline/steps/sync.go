@@ -1,5 +1,7 @@
 package pipelineSteps
 
+import "context"
+
 // ExecSteps are only valid for target type server
 
 type SyncStep struct {
@@ -25,7 +27,7 @@ func (ss *SyncStep) TargetInstance() string {
 	return ss.Target
 }
 
-func (ss *SyncStep) Execute(deps *StepDeps) error {
+func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) error {
 	deps.Logger.Log("Executed sync step")
 	return nil
 }

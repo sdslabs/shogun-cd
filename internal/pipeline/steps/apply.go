@@ -1,5 +1,7 @@
 package pipelineSteps
 
+import "context"
+
 type ApplyStep struct {
 	TriggerWhen string   `yaml:"trigger_when,omitempty"`
 	Target      string   `yaml:"target"` // [TODO]: change this to pointer if needed
@@ -18,7 +20,7 @@ func (as *ApplyStep) TargetInstance() string {
 	return as.Target
 }
 
-func (as *ApplyStep) Execute(deps *StepDeps) error {
+func (as *ApplyStep) Execute(ctx context.Context, deps *StepDeps) error {
 	deps.Logger.Log("Executed apply step")
 
 	return nil
