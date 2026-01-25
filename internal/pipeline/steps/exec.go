@@ -2,7 +2,6 @@ package pipelineSteps
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/kunalvirwal/shogun-cd/internal/target"
@@ -29,14 +28,15 @@ func (es *ExecStep) TargetInstance() string {
 	return es.Target
 }
 
-func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) error {
+func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error) {
+	var output string
 	// Validate target
 	targetInstance, exists := deps.Targets[es.Target]
 	if !exists {
-		return fmt.Errorf("Target not found: %s", es.Target)
+		return deps.Logger.LogShogunError(output, "Target not found: %s", es.Target)
 	}
 	if targetInstance.Metadata.Type != target.ServerType {
-		return fmt.Errorf("Exec step can only be executed on server type targets. Target %s is of type %s", es.Target, targetInstance.Metadata.Type)
+		return deps.Logger.LogShogunError(output, "Exec step can only be executed on server type targets. Target %s is of type %s", es.Target, targetInstance.Metadata.Type)
 	}
 
 	client, err := deps.SSHManager.GetClient(es.Target)
@@ -44,11 +44,11 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) error {
 	if err != nil {
 		sshkey, err := deps.SecretService.FetchSecret(targetInstance.Spec.AccessSecret)
 		if err != nil {
-			return fmt.Errorf("Failed to fetch secret for target %s: %v", es.Target, err)
+			return deps.Logger.LogShogunError(output, "Failed to fetch secret for target %s: %v", es.Target, err)
 		}
 		client, err = deps.SSHManager.NewClient(targetInstance.Metadata.Name, targetInstance.Spec.Host, targetInstance.Spec.Port, targetInstance.Spec.User, []byte(sshkey))
 		if err != nil {
-			return fmt.Errorf("Failed to create SSH client for target %s: %v", es.Target, err)
+			return deps.Logger.LogShogunError(output, "Failed to create SSH client for target %s: %v", es.Target, err)
 		}
 	}
 
@@ -68,7 +68,7 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) error {
 
 	session, err := client.NewSession()
 	if err != nil {
-		return fmt.Errorf("Failed to create SSH session for target %s: %v", es.Target, err)
+		return deps.Logger.LogShogunError(output, "Failed to create SSH session for target %s: %v", es.Target, err)
 	}
 
 	// [TODO]: Use these for streaming output
@@ -97,20 +97,20 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) error {
 	select {
 	// context done case
 	case <-ctx.Done():
-		return fmt.Errorf("Command execution was stoped by context %s", es.Target)
+		return deps.Logger.LogShogunError(output, "Command execution stopped by context cancellation")
 
 	// exec done case
 	case <-done:
 		if execErr != nil {
 			if exitErr, ok := execErr.(*ssh.ExitError); ok {
-				deps.Logger.LogNewError("Command execution failed on target %s: %v, output: \n %s", es.Target, exitErr, string(out))
-				return exitErr
+				return deps.Logger.LogShogunError(output, "Command execution failed on target %s: %v, output: \n %s", es.Target, exitErr, string(out))
 			}
 
-			return fmt.Errorf("SSH session error on target %s: %v", es.Target, err)
+			return deps.Logger.LogShogunError(output, "SSH session error on target %s: %v", es.Target, err)
 		}
 	}
-	fmt.Println("Command Output:", string(out))
+
+	output = deps.Logger.LogShogunInfo(output, "Command output: \n%s", string(out))
 	deps.Logger.Log("Executed exec step")
-	return nil
+	return output, nil
 }

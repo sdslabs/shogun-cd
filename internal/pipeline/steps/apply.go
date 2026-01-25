@@ -20,8 +20,8 @@ func (as *ApplyStep) TargetInstance() string {
 	return as.Target
 }
 
-func (as *ApplyStep) Execute(ctx context.Context, deps *StepDeps) error {
+func (as *ApplyStep) Execute(ctx context.Context, deps *StepDeps) (string, error) {
 	deps.Logger.Log("Executed apply step")
 
-	return nil
+	return "", nil
 }

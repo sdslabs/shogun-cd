@@ -31,22 +31,23 @@ func (ms *MutateStep) Trigger() string {
 }
 
 // Only POSIX compliant
-func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) error {
+func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) (string, error) {
 	deps.GitService.LockRepo()
 	defer deps.GitService.UnlockRepo()
 
+	output := deps.Logger.LogShogunInfo("", "Starting YAML mutation")
 	for _, change := range ms.Changes {
 		file := filepath.Join(deps.GitService.GetRepoRoot(), change.File)
 		f, err := os.ReadFile(file)
 		if err != nil {
-			return err
+			return deps.Logger.LogShogunError(output, "Failed to read file %s: %v", change.File, err)
 		}
 
 		// YAML mutation logic
 		var root yaml.Node
 		err = yaml.Unmarshal(f, &root)
 		if err != nil {
-			return err
+			return deps.Logger.LogShogunError(output, "Failed to parse YAML file %s: %v", change.File, err)
 		}
 
 		change.Value = InterpolateVariables(change.Value, deps.HookValues)
@@ -54,20 +55,20 @@ func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) error {
 		fieldPath := strings.Split(change.UpdateField, ".")
 		err = mutateYAMLField(&root, fieldPath, change.Value)
 		if err != nil {
-			return err
+			return deps.Logger.LogShogunError(output, "Failed to mutate field %s in file %s: %v", change.UpdateField, change.File, err)
 		}
 
 		dir := filepath.Dir(file)
 		tmp, err := os.CreateTemp(dir, "mutate-*.yaml")
 		if err != nil {
-			return err
+			return deps.Logger.LogShogunError(output, "Failed to create temp file for %s: %v", change.File, err)
 		}
 
 		enc := yaml.NewEncoder(tmp)
 		enc.SetIndent(2)
 		err = enc.Encode(&root)
 		if err != nil {
-			return err
+			return deps.Logger.LogShogunError(output, "Failed to encode YAML for %s: %v", change.File, err)
 		}
 		enc.Close()
 		tmp.Close()
@@ -75,18 +76,21 @@ func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) error {
 		// This is only Posix compliant as the original file pre-exists an renaming on windows doesn't overwrite it
 		err = os.Rename(tmp.Name(), file)
 		if err != nil {
-			return err
+			return deps.Logger.LogShogunError(output, "Failed to rename temp file for %s: %v", change.File, err)
 		}
 
 	}
-
-	deps.Logger.Log("Yaml successfully mutated")
-	deps.GitService.CommitAndPushChanges(ctx, "[TEST] Replaced values via pipeline \"%s\"", deps.PipelineName)
-
-	return nil
+	// deps.Logger.Log("Yaml successfully mutated")
+	output = deps.Logger.LogShogunInfo(output, "YAML mutation completed successfully")
+	// Commit and push changes
+	out, err := deps.GitService.CommitAndPushChanges(ctx, "[TEST] Replaced values via pipeline \"%s\"", deps.PipelineName)
+	output += out
+	if err != nil {
+		return deps.Logger.LogShogunError(output, "Failed to commit and push changes: %v", err)
+	}
+	deps.Logger.Log("Executed mutate step")
+	return output, nil
 }
-
-// svc.web.volumes[0].name
 
 func mutateYAMLField(node *yaml.Node, fieldPath []string, value string) error {
 	var n *yaml.Node

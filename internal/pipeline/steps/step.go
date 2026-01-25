@@ -23,7 +23,7 @@ type Step interface {
 	// Returns the trigger condition of the step
 	Trigger() string
 	// Runs the step execution logic
-	Execute(ctx context.Context, deps *StepDeps) error
+	Execute(ctx context.Context, deps *StepDeps) (string, error)
 }
 
 // UnmarshalYAML is an interface hook for custom unmarshaling of StepWrapper

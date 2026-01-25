@@ -27,7 +27,7 @@ func (ss *SyncStep) TargetInstance() string {
 	return ss.Target
 }
 
-func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) error {
+func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) (string, error) {
 	deps.Logger.Log("Executed sync step")
-	return nil
+	return "", nil
 }
