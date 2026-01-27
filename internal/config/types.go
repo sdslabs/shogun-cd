@@ -5,6 +5,7 @@ type Config struct {
 	DataDir   string `yaml:"data_dir"`
 	GitConfig Git    `yaml:"git"`
 	ApiConfig Api    `yaml:"api"`
+	DBConfig  DB     `yaml:"database"`
 }
 
 type Git struct {
@@ -28,4 +29,13 @@ type Admin struct {
 type JWT struct {
 	Secret          string `yaml:"secret"`
 	ExpirationHours int    `yaml:"expiration_hours"`
+}
+
+type DB struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
+	SSLMode  string `yaml:"ssl_mode"`
 }

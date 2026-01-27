@@ -10,6 +10,7 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.Login)
+		auth.POST("/register", h.Register)
 	}
 
 	webhook := router.Group("/hook")

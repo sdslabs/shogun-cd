@@ -1,0 +1,26 @@
+DB_CONTAINER_NAME=shogun_db
+DB_PORT=5434
+DB_USER=shogun
+DB_PASSWORD=pwd
+DB_NAME=shogun_db
+
+.PHONY: db-run db-down db-logs
+
+db-run:
+	@echo "Starting database container '$(DB_CONTAINER_NAME)' on port $(DB_PORT)..."
+	docker run --name $(DB_CONTAINER_NAME) \
+		-p $(DB_PORT):5432 \
+		-e POSTGRES_USER=$(DB_USER) \
+		-e POSTGRES_PASSWORD=$(DB_PASSWORD) \
+		-e POSTGRES_DB=$(DB_NAME) \
+		-d postgres:alpine
+	@echo "Database is ready!"
+
+db-down:
+	@echo "Stopping database..."
+	docker stop $(DB_CONTAINER_NAME)
+	docker rm $(DB_CONTAINER_NAME)
+	@echo "Database stopped and removed."
+
+db-logs:
+	docker logs -f $(DB_CONTAINER_NAME)

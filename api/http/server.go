@@ -9,17 +9,18 @@ import (
 	"github.com/kunalvirwal/shogun-cd/api/http/middlewares"
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
+	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
-func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookService) {
+func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookService, store *store.Store) {
 
 	r := newRouter()
 
 	responder := response.NewResponder(cfg.Debug)
 	m := middlewares.NewManager(logger, cfg, responder, w)
-	h := controllers.NewHandler(logger, cfg, responder, w)
+	h := controllers.NewHandler(logger, cfg, responder, w, store)
 
 	initRoutes(r, m, h)
 

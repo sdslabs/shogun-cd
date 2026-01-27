@@ -7,6 +7,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/git"
 	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
+	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
@@ -50,9 +51,22 @@ func initServices() {
 
 	_ = app
 
+	// Initialize webhook service
 	webhook := webhooks.NewWebhookService(logger, orch)
 
-	go api.StartAPIServer(logger, cfg, webhook)
+	db, err := store.Connect(cfg, logger)
+	if err != nil {
+		logger.LogNewError(err.Error())
+		return
+	}
+
+	store := store.NewStore(db)
+	if err := seedAdmin(store, cfg); err != nil {
+		logger.LogNewError("Unable to Seed Admin account : %v", err.Error())
+	}
+
+	// Initialize api
+	go api.StartAPIServer(logger, cfg, webhook, store)
 
 	<-make(chan struct{}) // Block forever
 }
