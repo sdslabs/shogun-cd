@@ -1,11 +1,14 @@
 package webhooks
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"time"
+	"errors"
 
 	"github.com/kunalvirwal/shogun-cd/api/dto"
+	"github.com/kunalvirwal/shogun-cd/internal/models"
+	"github.com/kunalvirwal/shogun-cd/internal/store"
 )
 
 const (
@@ -14,7 +17,7 @@ const (
 	SecretEntropy = 32
 )
 
-func (s *Service) Create(input *dto.HookInput) (*Webhook, error) {
+func (s *Service) Create(ctx context.Context, input *dto.HookInput) (*Webhook, error) {
 	var secret string
 	var err error
 
@@ -27,30 +30,46 @@ func (s *Service) Create(input *dto.HookInput) (*Webhook, error) {
 		return nil, err
 	}
 
-	hook := &Webhook{
-		Slug:      "",
+	//[TODO] enforce input field lengths for webhook using validator tags
+
+	dbHook := &models.Webhook{
 		Secret:    secret,
 		Pipeline:  input.Pipeline,
 		Alias:     input.Alias,
 		CreatedBy: input.CreatedBy,
-		IsActive:  true,
-		CreatedAt: time.Now(),
+	}
+	hook := &Webhook{
+		Secret:    dbHook.Secret,
+		Pipeline:  dbHook.Pipeline,
+		Alias:     dbHook.Alias,
+		CreatedBy: dbHook.CreatedBy,
 	}
 
 	for {
 		temp, _ := generateSecretHex(SlugEntropy)
 		newSlug := prefix + temp
 
-		s.mu.Lock()
-		if _, exists := s.registry[newSlug]; exists {
-			s.mu.Unlock()
-			s.logger.LogInfo("Slug collision, Retrying")
-			continue
+		dbHook.Slug = newSlug
+		err := s.store.Create(ctx, dbHook)
+		if err != nil {
+			switch {
+			case errors.Is(err, store.ErrSlugCollision):
+				s.logger.LogError(store.ErrSlugCollision)
+				continue
+			default:
+				return nil, err
+			}
 		}
-		hook.Slug = newSlug
-		s.registry[newSlug] = hook
 
+		hook.ID = dbHook.ID
+		hook.Slug = dbHook.Slug
+		hook.CreatedAt = dbHook.CreatedAt
+		hook.IsActive = *dbHook.IsActive
+
+		s.mu.Lock()
+		s.registry[newSlug] = hook
 		s.mu.Unlock()
+
 		return hook, nil
 	}
 }

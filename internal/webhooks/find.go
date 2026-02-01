@@ -1,8 +1,10 @@
 package webhooks
 
+import "context"
+
 type WebhookFilter func(*Webhook) bool
 
-func (s *Service) Find(filter WebhookFilter) []*Webhook {
+func (s *Service) Find(ctx context.Context, filter WebhookFilter) []*Webhook {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

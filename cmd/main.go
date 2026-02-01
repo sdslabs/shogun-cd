@@ -1,6 +1,11 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+
 	api "github.com/kunalvirwal/shogun-cd/api/http"
 	"github.com/kunalvirwal/shogun-cd/internal/app"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
@@ -14,11 +19,16 @@ import (
 )
 
 func main() {
-	initServices()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	initServices(ctx)
 	// pipeline.LoadPipeline("./examples/pipeline.yaml")
+
+	<-ctx.Done() // Block forever
 }
 
-func initServices() {
+func initServices(ctx context.Context) {
 
 	// Initialize logger
 	logger := utils.NewLogger(utils.DebugLevel, true)
@@ -27,6 +37,7 @@ func initServices() {
 	cfg, err := config.LoadConfigs(logger)
 	if err != nil {
 		logger.LogNewError("Invalid config: Stopping Shogun...")
+		return
 	}
 
 	logger.SetLevel(cfg.Debug)
@@ -51,9 +62,6 @@ func initServices() {
 
 	_ = app
 
-	// Initialize webhook service
-	webhook := webhooks.NewWebhookService(logger, orch)
-
 	db, err := store.Connect(cfg, logger)
 	if err != nil {
 		logger.LogNewError(err.Error())
@@ -61,12 +69,18 @@ func initServices() {
 	}
 
 	store := store.NewStore(db)
-	if err := seedAdmin(store, cfg); err != nil {
+	if err := seedAdmin(ctx, store, cfg); err != nil {
 		logger.LogNewError("Unable to Seed Admin account : %v", err.Error())
+		return
+	}
+
+	// Initialize webhook service
+	webhook := webhooks.NewWebhookService(logger, orch, store)
+	if err = webhook.Load(ctx); err != nil {
+		logger.LogNewError("Unable to load Webhooks : %v", err.Error())
 	}
 
 	// Initialize api
-	go api.StartAPIServer(logger, cfg, webhook, store)
+	go api.StartAPIServer(ctx, logger, cfg, webhook, store)
 
-	<-make(chan struct{}) // Block forever
 }

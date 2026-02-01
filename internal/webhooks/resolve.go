@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 )
 
 // fetches webhook info, verifies payload, and runs the pipeline
-func (s *Service) Resolve(slug string, headers http.Header, body []byte) (*Webhook, error) {
+func (s *Service) Resolve(ctx context.Context, slug string, headers http.Header, body []byte) (*Webhook, error) {
 
 	s.mu.RLock()
 	hook, exists := s.registry[slug]
@@ -23,7 +24,7 @@ func (s *Service) Resolve(slug string, headers http.Header, body []byte) (*Webho
 		return nil, ErrHookInactive
 	}
 
-	ok, err := hook.VerifyPayload(headers, body)
+	ok, err := hook.VerifyPayload(ctx, headers, body)
 	if err != nil {
 		return nil, err
 	}

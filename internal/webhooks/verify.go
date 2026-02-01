@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -14,7 +15,7 @@ const (
 	ShogunHMACHeader   = "X-Shogun-HMAC"  // contains the HMAC signature (for cli requests)
 )
 
-func (w *Webhook) VerifyPayload(headers http.Header, body []byte) (bool, error) {
+func (w *Webhook) VerifyPayload(ctx context.Context, headers http.Header, body []byte) (bool, error) {
 
 	if token := headers.Get(ShogunSecretHeader); token != "" {
 		return subtle.ConstantTimeCompare([]byte(token), []byte(w.Secret)) == 1, nil

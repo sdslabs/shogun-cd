@@ -1,8 +1,12 @@
 package webhooks
 
-func (s *Service) SetStatus(slug string, isActive bool) error {
+import "context"
 
-	// [TODO] db call to change webhook status
+func (s *Service) SetStatus(ctx context.Context, slug string, isActive bool) error {
+
+	if err := s.store.SetStatus(ctx, slug, isActive); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	if v, ok := s.registry[slug]; ok {

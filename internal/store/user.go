@@ -11,17 +11,17 @@ import (
 	"gorm.io/gorm"
 )
 
-var (
-	ErrEmailTaken       = errors.New("User with this email already exists")
-	ErrUserNotFound     = errors.New("User Not Found")
-	ErrAccountSuspended = errors.New("Account Suspended")
-)
-
 type UserStore interface {
 	Create(ctx context.Context, in *dto.LoginInput) error
 	MakeAdmin(ctx context.Context, in *dto.LoginInput) error
 	FindOne(ctx context.Context, filter *dto.UserFilter) (*models.User, error)
 }
+
+var (
+	ErrEmailTaken       = errors.New("User with this email already exists")
+	ErrUserNotFound     = errors.New("User Not Found")
+	ErrAccountSuspended = errors.New("Account Suspended")
+)
 
 type userStore struct {
 	db *gorm.DB

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/gin-contrib/cors"
@@ -14,8 +15,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
-func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookService, store *store.Store) {
-
+func StartAPIServer(ctx context.Context, logger utils.Logger, cfg *config.Config, w webhooks.WebhookService, store *store.Store) {
 	r := newRouter()
 
 	responder := response.NewResponder(cfg.Debug)
@@ -27,7 +27,7 @@ func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookS
 	if err := r.Run(fmt.Sprintf(":%v", cfg.ApiConfig.Port)); err != nil {
 		logger.LogError(err)
 	}
-
+	// [TODO] implement server shutdown using context
 }
 
 func newRouter() *gin.Engine {

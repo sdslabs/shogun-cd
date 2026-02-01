@@ -38,6 +38,7 @@ func Connect(cfg *config.Config, logger utils.Logger) (*gorm.DB, error) {
 
 	err = db.AutoMigrate(
 		&models.User{},
+		&models.Webhook{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("migration failed : %w", err)
