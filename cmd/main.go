@@ -67,8 +67,11 @@ func initServices(ctx context.Context) {
 		logger.LogNewError(err.Error())
 		return
 	}
-
-	store := store.NewStore(db)
+	store, err := store.NewStore(cfg, db)
+	if err != nil {
+		logger.LogNewError("Unable to Initialise Store : %v", err.Error())
+		return
+	}
 	if err := seedAdmin(ctx, store, cfg); err != nil {
 		logger.LogNewError("Unable to Seed Admin account : %v", err.Error())
 		return

@@ -32,10 +32,13 @@ type JWT struct {
 }
 
 type DB struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"dbname"`
-	SSLMode  string `yaml:"ssl_mode"`
+	Host           string `yaml:"host"`
+	Port           int    `yaml:"port"`
+	User           string `yaml:"user"`
+	Password       string `yaml:"password"`
+	DBName         string `yaml:"dbname"`
+	SSLMode        string `yaml:"ssl_mode"`
+	MasterKey      string `yaml:"master_key"`
+	EncryptionSalt string `yaml:"encryption_salt"`
+	DerivedKey     []byte `yaml:"-"`
 }
