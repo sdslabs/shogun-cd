@@ -6,7 +6,7 @@ metadata:
 spec:
     host: prod1.example.com
     user: api
-    port: 6443
+    port: 6443  # for K8s cluster or 22 for ssh
     # This secret should point to either the ssh key in case of server or the kube config in case of cluster
-    access-key-secret: prod1-kube-conf
+    access-key-secret: prod1-kube-conf # or prod1-ssh-key, as defined with the secret service
     

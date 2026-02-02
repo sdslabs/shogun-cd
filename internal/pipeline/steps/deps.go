@@ -5,21 +5,27 @@ import (
 	"strings"
 
 	"github.com/kunalvirwal/shogun-cd/internal/git"
+	"github.com/kunalvirwal/shogun-cd/internal/secrets"
+	"github.com/kunalvirwal/shogun-cd/internal/sshclient"
+	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
 // StepDeps represents dependencies required by pipeline steps.
 type StepDeps struct {
 	// [TODO] Add SSH
-	PipelineName string
-	Logger       utils.Logger
-	GitService   git.GitService
-	HookValues   map[string]string
+	PipelineName  string
+	Logger        utils.Logger
+	GitService    git.GitService
+	SecretService secrets.SecretService
+	Targets       map[string]*target.Target
+	HookValues    map[string]string
+	SSHManager    sshclient.SSHManager
 }
 
 // InterpolateVariables replaces {{...}} patterns in the input string with values from the variables map
 func InterpolateVariables(input string, variables map[string]string) string {
-	re := regexp.MustCompile(`(?s)\{\{(.*?)\}\}`)
+	re := regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
 
 	return re.ReplaceAllStringFunc(input, func(match string) string {
 		// Extract the key from {{KEY}}

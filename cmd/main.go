@@ -7,6 +7,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/git"
 	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
+	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
@@ -36,8 +37,11 @@ func initServices() {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
 	}
 
+	// Initialize Secret Manager
+	secretService := secrets.NewSecretService()
+
 	// Initialize Pipeline service
-	pipelineService := pipeline.NewPipelineService(logger, gitService)
+	pipelineService := pipeline.NewPipelineService(logger, gitService, secretService)
 
 	// Initialize Target service
 	targetService := target.NewTargetService(logger, gitService)
@@ -46,7 +50,7 @@ func initServices() {
 	orch.Start()
 
 	// Initialize main application
-	app := app.NewApp(logger, gitService, pipelineService, targetService)
+	app := app.NewApp(logger, gitService, pipelineService, targetService, secretService)
 
 	_ = app
 

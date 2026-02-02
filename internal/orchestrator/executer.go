@@ -27,7 +27,8 @@ func (o *orchestrator) RunPipeline(pipelineName string, triggerKind pipeline.Tri
 		}
 
 		o.mu.RLock()
-		success := o.pipelineService.ExecutePipeline(pipeline, triggerKind, variables)
+		targets := o.Targets.Load()
+		success := o.pipelineService.ExecutePipeline(pipeline, triggerKind, *targets, variables)
 		o.mu.RUnlock()
 
 		if !success {
