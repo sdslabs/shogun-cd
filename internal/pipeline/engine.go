@@ -21,6 +21,19 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targe
 		hookValues = make(map[string]string)
 	}
 
+	found := false
+	for _, t := range pipeline.Spec.Triggers {
+		if t.Type == string(trigger) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		p.logger.LogNewError("Pipeline %s does not have trigger of type %s; cannot execute", pipeline.Metadata.Name, string(trigger))
+		return false
+	}
+
 	deps := &pipelineSteps.StepDeps{
 		PipelineName:  pipeline.Metadata.Name,
 		Logger:        p.logger,

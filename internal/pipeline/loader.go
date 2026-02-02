@@ -44,8 +44,8 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 		p.logger.LogNewError("metadata.name cannot be empty")
 		return false
 	}
-	if len(pipeline.Spec.Triggers) == 0 {
-		p.logger.LogNewError("at least one trigger must be specified")
+	if len(pipeline.Spec.Triggers) == 0 || len(pipeline.Spec.Triggers) > 2 {
+		p.logger.LogNewError("pipeline must have 1 or 2 triggers defined")
 		return false
 	}
 	for _, trigger := range pipeline.Spec.Triggers {

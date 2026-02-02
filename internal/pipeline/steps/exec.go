@@ -2,6 +2,8 @@ package pipelineSteps
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/kunalvirwal/shogun-cd/internal/target"
@@ -9,6 +11,7 @@ import (
 )
 
 // ExecSteps are only valid for target type server
+const delimiter = "SHOGUN_CMD_DELIMITER"
 
 type ExecStep struct {
 	TriggerWhen string   `yaml:"trigger_when,omitempty"`
@@ -54,13 +57,15 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 
 	// create command script
 	var script strings.Builder
-
-	script.WriteString("set -eux\n")
-	for _, cmd := range es.Commands {
+	prompt := targetInstance.Spec.User + "@" + targetInstance.Spec.Host + "$ " + delimiter
+	script.WriteString("set -eu\n")
+	for i, cmd := range es.Commands {
 
 		cmd = InterpolateVariables(cmd, deps.HookValues)
 		cmd = deps.SecretService.ResolveSecrets(cmd)
 
+		script.WriteString("echo \"" + prompt + " " + fmt.Sprint(i) + "\"")
+		script.WriteByte('\n')
 		script.WriteString(cmd)
 		script.WriteByte('\n')
 
@@ -97,10 +102,14 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	select {
 	// context done case
 	case <-ctx.Done():
+		out = es.ParseDelimiter(out)
+		deps.Logger.LogShogunInfo(output, "Command output: \n%s", string(out))
 		return deps.Logger.LogShogunError(output, "Command execution stopped by context cancellation")
 
 	// exec done case
 	case <-done:
+		out = es.ParseDelimiter(out)
+		output = deps.Logger.LogShogunInfo(output, "Command output: \n%s", string(out))
 		if execErr != nil {
 			if exitErr, ok := execErr.(*ssh.ExitError); ok {
 				return deps.Logger.LogShogunError(output, "Command execution failed on target %s: %v, output: \n %s", es.Target, exitErr, string(out))
@@ -110,7 +119,27 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 		}
 	}
 
-	output = deps.Logger.LogShogunInfo(output, "Command output: \n%s", string(out))
 	deps.Logger.Log("Executed exec step")
 	return output, nil
+}
+
+func (es *ExecStep) ParseDelimiter(out []byte) []byte {
+	lines := strings.Split(string(out), "\n")
+	var cleanedLines []string
+
+	for _, line := range lines {
+		if strings.Contains(line, delimiter) {
+			parts := strings.Split(line, delimiter)
+			if len(parts) == 2 {
+				cmdNum := strings.TrimSpace(parts[1])
+				num, err := strconv.Atoi(cmdNum)
+				if err == nil && num >= 0 && num < len(es.Commands) {
+					cleanedLines = append(cleanedLines, parts[0]+es.Commands[num])
+				}
+			}
+		} else {
+			cleanedLines = append(cleanedLines, line)
+		}
+	}
+	return []byte(strings.Join(cleanedLines, "\n"))
 }
