@@ -64,16 +64,15 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targe
 		}
 
 		out, err := step.Execute(ctx, deps)
-
 		output += out
 		// p.logger.Log("Step %d output:\n %s", i+1, out)
 		if err != nil {
 			p.logger.LogNewError("Step %d failed: %v", i+1, err)
-			output, _ = deps.Logger.LogShogunError(output, "Step %d failed: %v", i+1, err)
+			output, _ = deps.Logger.LogShogunError(output, "Step %d failed: %v\n", i+1, err)
 			success = false
 			break
 		}
-		output = p.logger.LogShogunInfo(output, "Step %d executed successfully", i+1)
+		output = p.logger.LogShogunInfo(output, "Step %d executed successfully\n", i+1)
 		p.logger.Log("Step %d executed successfully", i+1)
 	}
 
