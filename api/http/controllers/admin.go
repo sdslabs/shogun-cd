@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kunalvirwal/shogun-cd/api/dto"
 )
 
 func (h *Handler) CreateAPIKey(c *gin.Context) {
@@ -29,32 +30,82 @@ func (h *Handler) DeleteAPIKey(c *gin.Context) {
 }
 
 func (h *Handler) ListAllSecrets(c *gin.Context) {
+	var req dto.SecretFilter
 
-	// [TODO] list all the secret's name (NEVER display values)
+	if err := c.ShouldBind(&req); err != nil {
+		h.response.BadRequest(c, "Bad Input", err)
+		return
+	}
 
-	h.response.Success(c, "All Secrets (without value)", nil)
+	// [TODO] granular error handling for different http status codes.
+	data, err := h.secret.FindMany(c.Request.Context(), &req)
+	if err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
+	h.response.Success(c, "All Secrets (without value)", data)
 }
 
-func (h *Handler) CreateSecret(c *gin.Context) {
+func (h *Handler) CreateSecrets(c *gin.Context) {
+	var req []dto.SecretInput
 
-	// [TODO] create a new secret
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.response.BadRequest(c, "Bad Input", err)
+		return
+	}
 
-	h.response.Created(c, "New Secret Created", nil)
+	// [TODO] granular error handling for different http status codes.
+	if err := h.secret.Create(c.Request.Context(), req); err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
+	h.response.Created(c, "New Secret(s) Created", nil)
+}
+
+func (h *Handler) ForceCreateSecrets(c *gin.Context) {
+	var req []dto.SecretInput
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.response.BadRequest(c, "Bad Input", err)
+		return
+	}
+
+	// [TODO] granular error handling for different http status codes.
+	if err := h.secret.Upsert(c.Request.Context(), req); err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
+	h.response.Created(c, "New Secret(s) Created", nil)
 }
 
 func (h *Handler) UpdateSecret(c *gin.Context) {
-	s := c.Param("secret")
+	var req dto.SecretInput
 
-	// [TODO] updates a secret
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.response.BadRequest(c, "Bad Input", err)
+		return
+	}
 
-	h.response.Success(c, fmt.Sprintf("Secret Updated - %v", s), nil)
+	// [TODO] granular error handling for different http status codes.
+	if err := h.secret.Update(c.Request.Context(), &req); err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
+	h.response.Success(c, fmt.Sprintf("Secret Updated - %v", req.Name), nil)
 
 }
 
 func (h *Handler) DeleteSecret(c *gin.Context) {
 	s := c.Param("secret")
 
-	// [TODO] deletes a secret
+	if err := h.secret.Delete(c.Request.Context(), s); err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
 
 	h.response.Success(c, fmt.Sprintf("Secret Deleted - %v", s), nil)
 }

@@ -6,6 +6,6 @@ type LoginInput struct {
 }
 
 type UserFilter struct {
-	Email    *string
+	Email    string
 	IsActive *bool
 }

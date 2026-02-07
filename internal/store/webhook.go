@@ -19,33 +19,21 @@ type WebhookStore interface {
 var (
 	ErrSlugCollision = errors.New("Slug Collision")
 	ErrHookNotFound  = errors.New("Webhook Not Found")
-	ErrEncryption    = errors.New("Error Encrypting Data")
-	ErrDecryption    = errors.New("Error Decrypting Data")
 )
 
 type webhookStore struct {
-	db     *gorm.DB
-	crypto Crypto
+	db *gorm.DB
 }
 
-func newWebhookStore(db *gorm.DB, c Crypto) WebhookStore {
+func newWebhookStore(db *gorm.DB) WebhookStore {
 	return &webhookStore{
-		db:     db,
-		crypto: c,
+		db: db,
 	}
 }
 
 func (w *webhookStore) Create(ctx context.Context, in *models.Webhook) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
-	}
-	if in.Secret != "" {
-		secret := in.Secret
-		encrypted, err := w.crypto.Encrypt(secret)
-		if err != nil {
-			return ErrEncryption
-		}
-		in.Secret = encrypted
 	}
 
 	if err := gorm.G[models.Webhook](w.db).
@@ -110,19 +98,5 @@ func (w *webhookStore) Load(ctx context.Context) ([]*models.Webhook, error) {
 		return nil, err
 	}
 
-	var validHooks []*models.Webhook
-
-	for _, h := range hooks {
-		if h.Secret == "" {
-			continue
-		}
-		decrypted, err := w.crypto.Decrypt(h.Secret)
-		if err != nil {
-			continue
-		}
-		h.Secret = decrypted
-		validHooks = append(validHooks, h)
-	}
-
-	return validHooks, nil
+	return hooks, nil
 }

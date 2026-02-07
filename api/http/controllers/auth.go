@@ -44,11 +44,11 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	user, err := h.store.User.FindOne(c.Request.Context(), &dto.UserFilter{
-		Email: &req.Email,
+		Email: req.Email,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, store.ErrUserNotFound):
+		case errors.Is(err, store.ErrRecordNotFound):
 			h.response.Unauthorized(c, "Invalid email or password", err)
 			return
 		default:

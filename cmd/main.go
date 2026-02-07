@@ -1,17 +1,14 @@
 package main
 
 import (
-	"context"
-	"os"
-	"os/signal"
-	"syscall"
-
 	api "github.com/kunalvirwal/shogun-cd/api/http"
 	"github.com/kunalvirwal/shogun-cd/internal/app"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
+	"github.com/kunalvirwal/shogun-cd/internal/encryption"
 	"github.com/kunalvirwal/shogun-cd/internal/git"
 	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
+	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
@@ -19,16 +16,11 @@ import (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	initServices(ctx)
+	initServices()
 	// pipeline.LoadPipeline("./examples/pipeline.yaml")
-
-	<-ctx.Done() // Block forever
 }
 
-func initServices(ctx context.Context) {
+func initServices() {
 
 	// Initialize logger
 	logger := utils.NewLogger(utils.DebugLevel, true)
@@ -41,6 +33,23 @@ func initServices(ctx context.Context) {
 	}
 
 	logger.SetLevel(cfg.Debug)
+
+	db, err := store.Connect(cfg, logger)
+	if err != nil {
+		logger.LogNewError(err.Error())
+		return
+	}
+	store, err := store.NewStore(cfg, db)
+	if err != nil {
+		logger.LogNewError("Unable to Initialise Store : %v", err.Error())
+		return
+	}
+	encryption, err := encryption.NewService(cfg, logger)
+	if err != nil {
+		logger.LogNewError("Unable to Initialise Encryption service : %v", err.Error())
+		return
+	}
+	secrets := secrets.NewSecretService(encryption, *store, logger)
 
 	// Initialize Git service
 	gitService, err := git.NewGitService(logger, cfg)
@@ -62,28 +71,19 @@ func initServices(ctx context.Context) {
 
 	_ = app
 
-	db, err := store.Connect(cfg, logger)
-	if err != nil {
-		logger.LogNewError(err.Error())
-		return
-	}
-	store, err := store.NewStore(cfg, db)
-	if err != nil {
-		logger.LogNewError("Unable to Initialise Store : %v", err.Error())
-		return
-	}
-	if err := seedAdmin(ctx, store, cfg); err != nil {
+	if err := seedAdmin(store, cfg); err != nil {
 		logger.LogNewError("Unable to Seed Admin account : %v", err.Error())
 		return
 	}
 
 	// Initialize webhook service
-	webhook := webhooks.NewWebhookService(logger, orch, store)
-	if err = webhook.Load(ctx); err != nil {
+	webhook := webhooks.NewWebhookService(logger, orch, store, encryption)
+	if err = webhook.Load(); err != nil {
 		logger.LogNewError("Unable to load Webhooks : %v", err.Error())
 	}
 
 	// Initialize api
-	go api.StartAPIServer(ctx, logger, cfg, webhook, store)
+	go api.StartAPIServer(logger, cfg, webhook, store, secrets)
 
+	<-make(chan struct{}) // Block forever
 }

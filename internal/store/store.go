@@ -1,6 +1,8 @@
 package store
 
 import (
+	"errors"
+
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"gorm.io/gorm"
 )
@@ -8,16 +10,17 @@ import (
 type Store struct {
 	User    UserStore
 	Webhook WebhookStore
+	Secret  SecretStore
 }
 
-func NewStore(cfg *config.Config, db *gorm.DB) (*Store, error) {
-	c, err := newCrypto(cfg)
-	if err != nil {
-		return nil, err
-	}
+var (
+	ErrRecordNotFound = errors.New("Record Not Found")
+)
 
+func NewStore(cfg *config.Config, db *gorm.DB) (*Store, error) {
 	return &Store{
 		User:    newUserStore(db),
-		Webhook: newWebhookStore(db, c),
+		Webhook: newWebhookStore(db),
+		Secret:  newSecretStore(db),
 	}, nil
 }

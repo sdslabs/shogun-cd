@@ -32,14 +32,19 @@ func (s *Service) Create(ctx context.Context, input *dto.HookInput) (*Webhook, e
 
 	//[TODO] enforce input field lengths for webhook using validator tags
 
+	encrypted, err := s.encryption.Encrypt(secret)
+	if err != nil {
+		return nil, err
+	}
+
 	dbHook := &models.Webhook{
-		Secret:    secret,
+		Secret:    encrypted,
 		Pipeline:  input.Pipeline,
 		Alias:     input.Alias,
 		CreatedBy: input.CreatedBy,
 	}
 	hook := &Webhook{
-		Secret:    dbHook.Secret,
+		Secret:    secret,
 		Pipeline:  dbHook.Pipeline,
 		Alias:     dbHook.Alias,
 		CreatedBy: dbHook.CreatedBy,

@@ -10,7 +10,8 @@ import (
 )
 
 // makes the admin user upon startup (ignores if admin exists)
-func seedAdmin(ctx context.Context, s *store.Store, cfg *config.Config) error {
+func seedAdmin(s *store.Store, cfg *config.Config) error {
+	ctx := context.Background()
 	if err := s.User.Create(ctx, &dto.LoginInput{
 		Email:    cfg.ApiConfig.Admin.Email,
 		Password: cfg.ApiConfig.Admin.Password,

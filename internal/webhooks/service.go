@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kunalvirwal/shogun-cd/api/dto"
+	"github.com/kunalvirwal/shogun-cd/internal/encryption"
 	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
 
@@ -20,7 +21,7 @@ type WebhookService interface {
 	Delete(ctx context.Context, slug string) error
 	Find(ctx context.Context, filter WebhookFilter) []*Webhook
 	SetStatus(ctx context.Context, slug string, isActive bool) error
-	Load(ctx context.Context) error
+	Load() error
 }
 
 var (
@@ -48,16 +49,18 @@ type Service struct {
 	registry     map[string]*Webhook
 	orchestrator orchestrator.Orchestrator
 	store        store.WebhookStore
+	encryption   encryption.Service
 	logger       utils.Logger
 	mu           sync.RWMutex
 }
 
-func NewWebhookService(l utils.Logger, o orchestrator.Orchestrator, s *store.Store) WebhookService {
+func NewWebhookService(l utils.Logger, o orchestrator.Orchestrator, s *store.Store, e encryption.Service) WebhookService {
 	svc := &Service{
 		registry:     make(map[string]*Webhook),
 		orchestrator: o,
 		store:        s.Webhook,
 		logger:       l,
+		encryption:   e,
 	}
 	return svc
 }

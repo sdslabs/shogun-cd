@@ -9,7 +9,10 @@ import (
 
 // sync the local registry with database
 // current implementation of this function is meant to be run during startup
-func (s *Service) Load(ctx context.Context) error {
+// re-loading with this logic could lead to toctou errors with possible hook deletion
+func (s *Service) Load() error {
+	ctx := context.Background()
+
 	dbHooks, err := s.store.Load(ctx)
 	if err != nil {
 		return err
@@ -29,10 +32,16 @@ func (s *Service) Load(ctx context.Context) error {
 
 		go func(hook *models.Webhook, isActive bool) {
 			defer wg.Done()
+			decrypted, err := s.encryption.Decrypt(hook.Secret)
+			if err != nil {
+				s.logger.LogNewError("Failed to load webhook '%s': %v", hook.Slug, err)
+				return
+			}
+
 			wh := &Webhook{
 				ID:        hook.ID,
 				Slug:      hook.Slug,
-				Secret:    hook.Secret, // [TODO] [CRITICAL] decrypt the secret to store in registry
+				Secret:    decrypted,
 				Pipeline:  hook.Pipeline,
 				Alias:     hook.Alias,
 				CreatedBy: hook.CreatedBy,
@@ -50,7 +59,7 @@ func (s *Service) Load(ctx context.Context) error {
 	s.registry = newRegistry
 	s.mu.Unlock()
 
-	s.logger.LogInfo("%v Webhooks loaded from Database.", len(dbHooks))
+	s.logger.LogInfo("%v/%v Webhooks loaded from Database.", len(newRegistry), len(dbHooks))
 
 	return nil
 }

@@ -19,7 +19,6 @@ type UserStore interface {
 
 var (
 	ErrEmailTaken       = errors.New("User with this email already exists")
-	ErrUserNotFound     = errors.New("User Not Found")
 	ErrAccountSuspended = errors.New("Account Suspended")
 )
 
@@ -43,10 +42,11 @@ func (u *userStore) Create(ctx context.Context, in *dto.LoginInput) error {
 		return err
 	}
 	// role is set to `user` by default
-	err = gorm.G[models.User](u.db).Create(ctx, &models.User{
-		Email:    in.Email,
-		Password: string(pwdHash),
-	})
+	err = gorm.G[models.User](u.db).
+		Create(ctx, &models.User{
+			Email:    in.Email,
+			Password: string(pwdHash),
+		})
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrDuplicatedKey):
@@ -77,12 +77,12 @@ func (u *userStore) MakeAdmin(ctx context.Context, in *dto.LoginInput) error {
 
 func (u *userStore) FindOne(ctx context.Context, filter *dto.UserFilter) (*models.User, error) {
 	user, err := gorm.G[*models.User](u.db).
-		Where(&filter).
+		Where(filter).
 		First(ctx)
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
-			return nil, ErrUserNotFound
+			return nil, ErrRecordNotFound
 		default:
 			return nil, err
 		}

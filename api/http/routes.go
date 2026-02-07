@@ -42,8 +42,9 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		secret := admin.Group("/secrets")
 		{
 			secret.GET("", h.ListAllSecrets)
-			secret.POST("", h.CreateSecret)
-			secret.PATCH("/:secret", h.UpdateSecret)
+			secret.POST("", h.CreateSecrets)
+			secret.POST("/force", h.ForceCreateSecrets)
+			secret.PATCH("", h.UpdateSecret)
 			secret.DELETE("/:secret", h.DeleteSecret)
 		}
 	}

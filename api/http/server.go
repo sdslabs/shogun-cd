@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/gin-contrib/cors"
@@ -10,17 +9,18 @@ import (
 	"github.com/kunalvirwal/shogun-cd/api/http/middlewares"
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
+	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
-func StartAPIServer(ctx context.Context, logger utils.Logger, cfg *config.Config, w webhooks.WebhookService, store *store.Store) {
+func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookService, store *store.Store, secrets secrets.Service) {
 	r := newRouter()
 
 	responder := response.NewResponder(cfg.Debug)
 	m := middlewares.NewManager(logger, cfg, responder, w)
-	h := controllers.NewHandler(logger, cfg, responder, w, store)
+	h := controllers.NewHandler(logger, cfg, responder, w, store, secrets)
 
 	initRoutes(r, m, h)
 
