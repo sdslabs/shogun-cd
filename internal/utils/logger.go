@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -12,6 +13,10 @@ type Logger interface {
 	LogInfo(format string, args ...any)
 	Log(format string, args ...any)
 	LogCustom(color string, context string, msg string)
+	// These two functions help in appending shogun styled logs to pipeline logs and return errors if any
+	LogShogunError(output string, format string, args ...any) (string, error)
+	LogShogunInfo(output string, format string, args ...any) string
+	LogShogunGit(output string, format string, args ...any) string
 }
 
 type logger struct {
@@ -103,4 +108,27 @@ func (l *logger) Log(format string, args ...any) {
 
 func (l *logger) LogCustom(color string, context string, msg string) {
 	fmt.Println(getTime(), color+"["+context+"]"+Reset+White+": "+msg+Reset)
+}
+
+// Creates a shogun error and appends it to output log and returns both
+func (l *logger) LogShogunError(output string, format string, args ...any) (string, error) {
+	s := Red + "[Shogun-Error]" + Reset
+	err := fmt.Sprintf(format, args...)
+	output += fmt.Sprintf("%v: %v\n", s, err)
+	return output, errors.New(err)
+}
+
+// Appends an info message to output log and returns it
+func (l *logger) LogShogunInfo(output string, format string, args ...any) string {
+	s := Blue + "[Shogun]" + Reset
+	info := fmt.Sprintf(format, args...)
+	output += fmt.Sprintf("%v: %v\n", s, info)
+	return output
+}
+
+func (l *logger) LogShogunGit(output string, format string, args ...any) string {
+	s := Green + "[Shogun-Git-Logs]" + Reset
+	info := fmt.Sprintf(format, args...)
+	output += fmt.Sprintf("%v: %v\n", s, info)
+	return output
 }

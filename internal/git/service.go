@@ -36,7 +36,7 @@ type GitService interface {
 	// Get Polling Interval
 	GetPollingInterval() int
 	// CommitAndPushChanges commits and pushes changes to the remote repository with the specified commit message
-	CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) error
+	CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) (string, error)
 }
 
 const (

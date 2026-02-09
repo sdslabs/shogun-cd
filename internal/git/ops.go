@@ -6,8 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
 const (
@@ -245,34 +243,39 @@ func (s *Service) GetPollingInterval() int {
 
 // CommitAndPushChanges commits and pushes changes to the remote repository with the specified commit message
 // It assumes that the repository is already locked for exclusive access before calling this method
-func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) error {
+func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, args ...any) (string, error) {
+	output := ""
 	msg := fmt.Sprintf(commitMsg, args...)
 	out, err := s.repo.ExecGitCommand(ctx, s.gitPath, "add", ".")
 	if len(out) > 0 {
-		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+		// s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+		output = s.logger.LogShogunGit(output, string(out))
 	}
 	if err != nil {
 		s.logger.LogNewError("Failed to stage changes: %v", err)
-		return err
+		return output, err
 	}
 
 	out, err = s.repo.ExecGitCommand(ctx, s.gitPath, "commit", "-m", msg)
 	if len(out) > 0 {
-		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+		// s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+		output = s.logger.LogShogunGit(output, string(out))
 	}
 	if err != nil {
 		s.logger.LogNewError("Failed to commit changes: %v", err)
-		return err
+		return output, err
 	}
 
 	out, err = s.repo.ExecGitCommand(ctx, s.gitPath, "push", "origin", s.repo.Branch)
 	if len(out) > 0 {
-		s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+		// s.logger.LogCustom(utils.Green, "Git-logs", "\n"+string(out))
+		output = s.logger.LogShogunGit(output, string(out))
 	}
 	if err != nil {
 		s.logger.LogNewError("Failed to push changes: %v", err)
-		return err
+		return output, err
 	}
-	s.logger.LogInfo("Changes committed and pushed successfully")
-	return nil
+	// s.logger.LogInfo("Changes committed and pushed successfully")
+	output = s.logger.LogShogunInfo(output, "Changes committed and pushed successfully")
+	return output, nil
 }

@@ -1,6 +1,17 @@
 package pipelineSteps
 
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/kunalvirwal/shogun-cd/internal/target"
+	"golang.org/x/crypto/ssh"
+)
+
 // ExecSteps are only valid for target type server
+const delimiter = "SHOGUN_CMD_DELIMITER"
 
 type ExecStep struct {
 	TriggerWhen string   `yaml:"trigger_when,omitempty"`
@@ -20,7 +31,115 @@ func (es *ExecStep) TargetInstance() string {
 	return es.Target
 }
 
-func (es *ExecStep) Execute(deps *StepDeps) error {
+func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error) {
+	var output string
+	// Validate target
+	targetInstance, exists := deps.Targets[es.Target]
+	if !exists {
+		return deps.Logger.LogShogunError(output, "Target not found: %s", es.Target)
+	}
+	if targetInstance.Metadata.Type != target.ServerType {
+		return deps.Logger.LogShogunError(output, "Exec step can only be executed on server type targets. Target %s is of type %s", es.Target, targetInstance.Metadata.Type)
+	}
+
+	client, err := deps.SSHManager.GetClient(es.Target)
+	// No client or dead client, create a new one
+	if err != nil {
+		sshkey, err := deps.SecretService.FetchSecret(targetInstance.Spec.AccessSecret)
+		if err != nil {
+			return deps.Logger.LogShogunError(output, "Failed to fetch secret for target %s: %v", es.Target, err)
+		}
+		client, err = deps.SSHManager.NewClient(targetInstance.Metadata.Name, targetInstance.Spec.Host, targetInstance.Spec.Port, targetInstance.Spec.User, []byte(sshkey))
+		if err != nil {
+			return deps.Logger.LogShogunError(output, "Failed to create SSH client for target %s: %v", es.Target, err)
+		}
+	}
+
+	// create command script
+	var script strings.Builder
+	prompt := targetInstance.Spec.User + "@" + targetInstance.Spec.Host + "$ " + delimiter
+	script.WriteString("set -eu\n")
+	for i, cmd := range es.Commands {
+
+		cmd = InterpolateVariables(cmd, deps.HookValues)
+		cmd = deps.SecretService.ResolveSecrets(cmd)
+
+		script.WriteString("echo \"" + prompt + " " + fmt.Sprint(i) + "\"")
+		script.WriteByte('\n')
+		script.WriteString(cmd)
+		script.WriteByte('\n')
+
+	}
+
+	session, err := client.NewSession()
+	if err != nil {
+		return deps.Logger.LogShogunError(output, "Failed to create SSH session for target %s: %v", es.Target, err)
+	}
+
+	// [TODO]: Use these for streaming output
+	// stdout, err := session.StdoutPipe()
+	// if err != nil {
+	// 	return fmt.Errorf("Failed to get stdout pipe for target %s: %v", es.Target, err)
+	// }
+	// stderr, err := session.StderrPipe()
+	// if err != nil {
+	// 	return fmt.Errorf("Failed to get stderr pipe for target %s: %v", es.Target, err)
+	// }
+	done := make(chan error, 1)
+	var out []byte
+	var execErr error
+
+	go func() {
+		defer close(done)
+		defer session.Close()
+		out, execErr = session.CombinedOutput(
+			"/bin/sh -s <<'SHOGUN_EOF'\n" +
+				script.String() +
+				"SHOGUN_EOF\n",
+		)
+	}()
+
+	select {
+	// context done case
+	case <-ctx.Done():
+		out = es.ParseDelimiter(out)
+		deps.Logger.LogShogunInfo(output, "Command output: \n%s", string(out))
+		return deps.Logger.LogShogunError(output, "Command execution stopped by context cancellation")
+
+	// exec done case
+	case <-done:
+		out = es.ParseDelimiter(out)
+		output = deps.Logger.LogShogunInfo(output, "Command output: \n%s", string(out))
+		if execErr != nil {
+			if exitErr, ok := execErr.(*ssh.ExitError); ok {
+				return deps.Logger.LogShogunError(output, "Command execution failed on target %s: %v, output: \n %s", es.Target, exitErr, string(out))
+			}
+
+			return deps.Logger.LogShogunError(output, "SSH session error on target %s: %v", es.Target, err)
+		}
+	}
+
 	deps.Logger.Log("Executed exec step")
-	return nil
+	return output, nil
+}
+
+func (es *ExecStep) ParseDelimiter(out []byte) []byte {
+	lines := strings.Split(string(out), "\n")
+	var cleanedLines []string
+
+	for _, line := range lines {
+		if strings.Contains(line, delimiter) {
+			parts := strings.Split(line, delimiter)
+			if len(parts) == 2 {
+				cmdNum := strings.TrimSpace(parts[1])
+				num, err := strconv.Atoi(cmdNum)
+				if err == nil && num >= 0 && num < len(es.Commands) {
+					cleanedLines = append(cleanedLines, parts[0]+es.Commands[num])
+				}
+			}
+		} else {
+			cleanedLines = append(cleanedLines, line)
+		}
+	}
+	return []byte(strings.Join(cleanedLines, "\n"))
 }

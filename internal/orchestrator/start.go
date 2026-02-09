@@ -12,11 +12,6 @@ func (o *orchestrator) Start() {
 	o.gitService.Clone(ctx)
 	o.RunIndexer()
 	go o.StartPoller(ctx)
-	// vals := make(map[string]string)
-	// vals["IMAGE"] = "my-web-app:v1.3.4"
-	// vals["SERVICE_NAME"] = "web"
-	// // [TEST] Run a pipeline
-	// o.RunPipeline("deploy-my-app", pipeline.WebhookTriggerKind, vals)
 
 	// Start Git Watcher
 	gitEventsChan := o.gitService.GetPullEvents()
