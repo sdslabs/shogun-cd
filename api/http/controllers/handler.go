@@ -15,10 +15,10 @@ type Handler struct {
 	response response.Responder
 	webhook  webhooks.WebhookService
 	store    *store.Store
-	secret   secrets.Service
+	secret   secrets.SecretService
 }
 
-func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, store *store.Store, secrets secrets.Service) *Handler {
+func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, store *store.Store, secrets secrets.SecretService) *Handler {
 	return &Handler{
 		logger:   l,
 		config:   cfg,

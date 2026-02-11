@@ -17,7 +17,7 @@ type StepDeps struct {
 	PipelineName  string
 	Logger        utils.Logger
 	GitService    git.GitService
-	SecretService secrets.InMemorySecretService
+	SecretService secrets.SecretService
 	Targets       map[string]*target.Target
 	HookValues    map[string]string
 	SSHManager    sshclient.SSHManager

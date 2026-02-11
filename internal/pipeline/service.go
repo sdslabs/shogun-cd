@@ -17,10 +17,10 @@ type PipelineService interface {
 type Service struct {
 	logger        utils.Logger
 	gitService    git.GitService
-	secretService secrets.InMemorySecretService
+	secretService secrets.SecretService
 }
 
-func NewPipelineService(logger utils.Logger, gitService git.GitService, secretService secrets.InMemorySecretService) *Service {
+func NewPipelineService(logger utils.Logger, gitService git.GitService, secretService secrets.SecretService) *Service {
 	return &Service{
 		logger:        logger,
 		gitService:    gitService,

@@ -13,10 +13,10 @@ type App struct {
 	GitService      git.GitService
 	PipelineService pipeline.PipelineService
 	TargetService   target.TargetService
-	SecretService   secrets.InMemorySecretService
+	SecretService   secrets.SecretService
 }
 
-func NewApp(logger utils.Logger, gitService git.GitService, pipelineService pipeline.PipelineService, targetService target.TargetService, secretService secrets.InMemorySecretService) *App {
+func NewApp(logger utils.Logger, gitService git.GitService, pipelineService pipeline.PipelineService, targetService target.TargetService, secretService secrets.SecretService) *App {
 	return &App{
 		Logger:          logger,
 		GitService:      gitService,

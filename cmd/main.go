@@ -49,7 +49,9 @@ func initServices() {
 		logger.LogNewError("Unable to Initialise Encryption service : %v", err.Error())
 		return
 	}
-	secretService := secrets.NewSecretService(encryption, *store, logger)
+
+	// Initialize Secret Manager
+	secretService := secrets.NewSecretService(encryption, store, logger)
 
 	// Initialize Git service
 	gitService, err := git.NewGitService(logger, cfg)
@@ -57,11 +59,8 @@ func initServices() {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
 	}
 
-	// Initialize Secret Manager
-	inMemorySecretService := secrets.NewInMemoryService()
-
 	// Initialize Pipeline service
-	pipelineService := pipeline.NewPipelineService(logger, gitService, inMemorySecretService)
+	pipelineService := pipeline.NewPipelineService(logger, gitService, secretService)
 
 	// Initialize Target service
 	targetService := target.NewTargetService(logger, gitService)
@@ -70,7 +69,7 @@ func initServices() {
 	orch.Start()
 
 	// Initialize main application
-	app := app.NewApp(logger, gitService, pipelineService, targetService, inMemorySecretService)
+	app := app.NewApp(logger, gitService, pipelineService, targetService, secretService)
 
 	_ = app
 

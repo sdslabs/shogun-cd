@@ -133,7 +133,7 @@ func (h *Handler) DeactivateWebhook(c *gin.Context) {
 	err := h.webhook.SetStatus(ctx, slug, false)
 	if err != nil {
 		switch {
-		case errors.Is(err, store.ErrHookNotFound):
+		case errors.Is(err, store.ErrRecordNotFound):
 			h.response.NotFound(c, "Webhook Not Found", err)
 			return
 
@@ -155,7 +155,7 @@ func (h *Handler) ActivateWebhook(c *gin.Context) {
 	err := h.webhook.SetStatus(ctx, slug, true)
 	if err != nil {
 		switch {
-		case errors.Is(err, store.ErrHookNotFound):
+		case errors.Is(err, store.ErrRecordNotFound):
 			h.response.NotFound(c, "Webhook Not Found", err)
 			return
 

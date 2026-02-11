@@ -38,13 +38,11 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 			key.GET("", h.ListAllAPIKeys)
 			key.DELETE("/:key", h.DeleteAPIKey)
 		}
-		// [TODO] secrets routes are not implemented yet
+
 		secret := admin.Group("/secrets")
 		{
 			secret.GET("", h.ListAllSecrets)
-			secret.POST("", h.CreateSecrets)
-			secret.POST("/force", h.ForceCreateSecrets)
-			secret.PATCH("", h.UpdateSecret)
+			secret.POST("", h.SetSecrets)
 			secret.DELETE("/:secret", h.DeleteSecret)
 		}
 	}

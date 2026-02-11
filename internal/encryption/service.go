@@ -11,7 +11,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
-type Service interface {
+type EncryptionService interface {
 	Encrypt(plaintext string) (string, error)
 	Decrypt(ciphertext string) (string, error)
 }
@@ -31,7 +31,7 @@ type service struct {
 	logger utils.Logger
 }
 
-func NewService(cfg *config.Config, l utils.Logger) (Service, error) {
+func NewService(cfg *config.Config, l utils.Logger) (EncryptionService, error) {
 	if err := deriveKey(cfg); err != nil {
 		return nil, err
 	}

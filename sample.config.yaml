@@ -14,8 +14,8 @@ api:
         secret: "jwt-secret"
         expiration_hours: 1
 database:
-    host: "hogwarts"
-    port: 5434
+    host: "127.0.0.1"
+    port: 5432
     user: "shogun"
     password: "pwd"
     dbname: "shogun_db"

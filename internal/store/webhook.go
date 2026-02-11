@@ -18,7 +18,6 @@ type WebhookStore interface {
 
 var (
 	ErrSlugCollision = errors.New("Slug Collision")
-	ErrHookNotFound  = errors.New("Webhook Not Found")
 )
 
 type webhookStore struct {
@@ -82,7 +81,7 @@ func (w *webhookStore) SetStatus(ctx context.Context, slug string, isActive bool
 		return err
 	}
 	if rows == 0 {
-		return ErrHookNotFound
+		return ErrRecordNotFound
 	}
 
 	return nil

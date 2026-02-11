@@ -49,12 +49,12 @@ type Service struct {
 	registry     map[string]*Webhook
 	orchestrator orchestrator.Orchestrator
 	store        store.WebhookStore
-	encryption   encryption.Service
+	encryption   encryption.EncryptionService
 	logger       utils.Logger
 	mu           sync.RWMutex
 }
 
-func NewWebhookService(l utils.Logger, o orchestrator.Orchestrator, s *store.Store, e encryption.Service) WebhookService {
+func NewWebhookService(l utils.Logger, o orchestrator.Orchestrator, s *store.Store, e encryption.EncryptionService) WebhookService {
 	svc := &Service{
 		registry:     make(map[string]*Webhook),
 		orchestrator: o,

@@ -45,7 +45,7 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	client, err := deps.SSHManager.GetClient(es.Target)
 	// No client or dead client, create a new one
 	if err != nil {
-		sshkey, err := deps.SecretService.FetchSecret(targetInstance.Spec.AccessSecret)
+		sshkey, err := deps.SecretService.FetchSecret(ctx, targetInstance.Spec.AccessSecret)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to fetch secret for target %s: %v", es.Target, err)
 		}
@@ -62,7 +62,10 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	for i, cmd := range es.Commands {
 
 		cmd = InterpolateVariables(cmd, deps.HookValues)
-		cmd = deps.SecretService.ResolveSecrets(cmd)
+		cmd, err = deps.SecretService.ResolveSecrets(ctx, cmd)
+		if err != nil {
+			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", cmd, err)
+		}
 
 		script.WriteString("echo \"" + prompt + " " + fmt.Sprint(i) + "\"")
 		script.WriteByte('\n')

@@ -2,6 +2,9 @@ package secrets
 
 import (
 	"context"
+	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/internal/encryption"
@@ -10,22 +13,21 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
-type Service interface {
-	Create(ctx context.Context, in []dto.SecretInput) error
-	Upsert(ctx context.Context, in []dto.SecretInput) error
-	Update(ctx context.Context, in *dto.SecretInput) error
-	Resolve(ctx context.Context, name string) (string, error) // provides decrypted "value" of the secret
+type SecretService interface {
+	SetSecrets(ctx context.Context, in []dto.SecretInput) error
 	FindMany(ctx context.Context, filter *dto.SecretFilter) ([]*dto.Secret, error)
-	Delete(ctx context.Context, name string) error
+	FetchSecret(ctx context.Context, name string) (string, error)
+	ResolveSecrets(ctx context.Context, name string) (string, error) // provides decrypted "value" of the secret
+	DeleteSecret(ctx context.Context, name string) error
 }
 
 type service struct {
-	encryption encryption.Service
+	encryption encryption.EncryptionService
 	store      store.SecretStore
 	logger     utils.Logger
 }
 
-func NewSecretService(e encryption.Service, s store.Store, l utils.Logger) Service {
+func NewSecretService(e encryption.EncryptionService, s *store.Store, l utils.Logger) SecretService {
 	return &service{
 		encryption: e,
 		store:      s.Secret,
@@ -33,28 +35,12 @@ func NewSecretService(e encryption.Service, s store.Store, l utils.Logger) Servi
 	}
 }
 
-func (s *service) Create(ctx context.Context, in []dto.SecretInput) error {
+// updates the value of a secret, creates new if no such secret exists
+func (s *service) SetSecrets(ctx context.Context, in []dto.SecretInput) error {
 	secrets := make([]models.Secret, len(in))
 
 	for k, v := range in {
-		encrypted, err := s.encryption.Encrypt(in[k].Value)
-		if err != nil {
-			return err
-		}
-		secrets[k] = models.Secret{
-			Name:  v.Name,
-			Value: encrypted,
-		}
-	}
-
-	return s.store.Create(ctx, secrets)
-}
-
-func (s *service) Upsert(ctx context.Context, in []dto.SecretInput) error {
-	secrets := make([]models.Secret, len(in))
-
-	for k, v := range in {
-		encrypted, err := s.encryption.Encrypt(in[k].Value)
+		encrypted, err := s.encryption.Encrypt(v.Value)
 		if err != nil {
 			return err
 		}
@@ -67,36 +53,47 @@ func (s *service) Upsert(ctx context.Context, in []dto.SecretInput) error {
 	return s.store.Upsert(ctx, secrets)
 }
 
-func (s *service) Update(ctx context.Context, in *dto.SecretInput) error {
-	encrypted, err := s.encryption.Encrypt(in.Value)
-	if err != nil {
-		return err
-	}
-
-	return s.store.Update(ctx, &models.Secret{
-		Name:  in.Name,
-		Value: encrypted,
-	})
-}
-
-func (s *service) Resolve(ctx context.Context, name string) (string, error) {
-	secrets, err := s.store.GetSecret(ctx, name)
+func (s *service) FetchSecret(ctx context.Context, name string) (string, error) {
+	secret, err := s.store.GetSecret(ctx, name)
 	if err != nil {
 		return "", err
 	}
 
-	decrypted, err := s.encryption.Decrypt(secrets)
+	decrypted, err := s.encryption.Decrypt(secret)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w : %w", encryption.ErrDecryption, err)
 	}
 
 	return decrypted, nil
+}
+
+// takes a string as input and replaces the {{SECRET_NAME}} with its decrypted value as per the database.
+func (s *service) ResolveSecrets(ctx context.Context, input string) (string, error) {
+	var secretRegex = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+
+	matches := secretRegex.FindAllStringSubmatch(input, -1)
+
+	output := input
+
+	for _, match := range matches {
+		secretTag := match[0]
+		secretName := match[1]
+
+		decrypted, err := s.FetchSecret(ctx, secretName)
+		if err != nil {
+			return "", err
+		}
+
+		output = strings.ReplaceAll(output, secretTag, decrypted)
+	}
+
+	return output, nil
 }
 
 func (s *service) FindMany(ctx context.Context, filter *dto.SecretFilter) ([]*dto.Secret, error) {
 	return s.store.FindMany(ctx, filter)
 }
 
-func (s *service) Delete(ctx context.Context, name string) error {
+func (s *service) DeleteSecret(ctx context.Context, name string) error {
 	return s.store.Delete(ctx, name)
 }

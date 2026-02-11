@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
-	"gorm.io/gorm"
 )
 
 // NOTE : the values of constants must be consistent to the "column" in gorm tags.
@@ -36,12 +34,4 @@ type User struct {
 
 func (User) TableName() string {
 	return UserTableName
-}
-
-// hook to insert default role during user creation
-func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
-	if u.Role == "" {
-		u.Role = string(apiutils.RoleUser)
-	}
-	return nil
 }
