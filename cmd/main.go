@@ -4,10 +4,12 @@ import (
 	api "github.com/kunalvirwal/shogun-cd/api/http"
 	"github.com/kunalvirwal/shogun-cd/internal/app"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
+	"github.com/kunalvirwal/shogun-cd/internal/encryption"
 	"github.com/kunalvirwal/shogun-cd/internal/git"
 	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
+	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
@@ -27,18 +29,35 @@ func initServices() {
 	cfg, err := config.LoadConfigs(logger)
 	if err != nil {
 		logger.LogNewError("Invalid config: Stopping Shogun...")
+		return
 	}
 
 	logger.SetLevel(cfg.Debug)
+
+	db, err := store.Connect(cfg, logger)
+	if err != nil {
+		logger.LogNewError(err.Error())
+		return
+	}
+	store, err := store.NewStore(cfg, db)
+	if err != nil {
+		logger.LogNewError("Unable to Initialise Store : %v", err.Error())
+		return
+	}
+	encryption, err := encryption.NewService(cfg, logger)
+	if err != nil {
+		logger.LogNewError("Unable to Initialise Encryption service : %v", err.Error())
+		return
+	}
+
+	// Initialize Secret Manager
+	secretService := secrets.NewSecretService(encryption, store, logger)
 
 	// Initialize Git service
 	gitService, err := git.NewGitService(logger, cfg)
 	if err != nil {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
 	}
-
-	// Initialize Secret Manager
-	secretService := secrets.NewSecretService()
 
 	// Initialize Pipeline service
 	pipelineService := pipeline.NewPipelineService(logger, gitService, secretService)
@@ -54,9 +73,19 @@ func initServices() {
 
 	_ = app
 
-	webhook := webhooks.NewWebhookService(logger, orch)
+	if err := seedAdmin(store, cfg); err != nil {
+		logger.LogNewError("Unable to Seed Admin account : %v", err.Error())
+		return
+	}
 
-	go api.StartAPIServer(logger, cfg, webhook)
+	// Initialize webhook service
+	webhook := webhooks.NewWebhookService(logger, orch, store, encryption)
+	if err = webhook.Load(); err != nil {
+		logger.LogNewError("Unable to load Webhooks : %v", err.Error())
+	}
+
+	// Initialize api
+	go api.StartAPIServer(logger, cfg, webhook, store, secretService)
 
 	<-make(chan struct{}) // Block forever
 }

@@ -3,15 +3,13 @@ package apiutils
 type Role string
 
 const (
-	RoleAdmin    Role = "admin"
-	RoleEmployee Role = "employee"
-	RoleUser     Role = "user"
+	RoleAdmin Role = "admin"
 )
 
 func (r Role) ValidRole() (Role, bool) {
 	valid := false
 	switch r {
-	case RoleAdmin, RoleEmployee, RoleUser:
+	case RoleAdmin:
 		valid = true
 	}
 	return r, valid

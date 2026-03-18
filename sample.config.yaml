@@ -13,3 +13,12 @@ api:
     jwt:
         secret: "jwt-secret"
         expiration_hours: 1
+database:
+    host: "127.0.0.1"
+    port: 5432
+    user: "shogun"
+    password: "pwd"
+    dbname: "shogun_db"
+    ssl_mode: "disable"
+    master_key: "qwertyuiop"
+    encryption_salt: "salty-salt"

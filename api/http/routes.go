@@ -10,6 +10,7 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.Login)
+		auth.POST("/register", h.Register)
 	}
 
 	webhook := router.Group("/hook")
@@ -25,8 +26,9 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		webhook := admin.Group("/hook")
 		{
 			webhook.POST("", h.CreateWebhook)
+			webhook.PATCH("/:slug/pause", h.DeactivateWebhook)
+			webhook.PATCH("/:slug/resume", h.ActivateWebhook)
 			webhook.DELETE("/:slug", h.DeleteWebhook)
-			// [TODO] deactivate a webhook
 		}
 
 		// [TODO] api key routes are not implemented yet
@@ -36,12 +38,11 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 			key.GET("", h.ListAllAPIKeys)
 			key.DELETE("/:key", h.DeleteAPIKey)
 		}
-		// [TODO] secrets routes are not implemented yet
+
 		secret := admin.Group("/secrets")
 		{
 			secret.GET("", h.ListAllSecrets)
-			secret.POST("", h.CreateSecret)
-			secret.PATCH("/:secret", h.UpdateSecret)
+			secret.POST("", h.SetSecrets)
 			secret.DELETE("/:secret", h.DeleteSecret)
 		}
 	}

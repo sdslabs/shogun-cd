@@ -1,17 +1,16 @@
 package webhooks
 
-func (s *Service) Delete(slug string) error {
+import "context"
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *Service) Delete(ctx context.Context, slug string) error {
 
-	if _, exists := s.registry[slug]; !exists {
-		return ErrHookNotFound
+	if err := s.store.Delete(ctx, slug); err != nil {
+		return err
 	}
 
+	s.mu.Lock()
 	delete(s.registry, slug)
-
-	// [TODO] delete from DB
+	s.mu.Unlock()
 
 	return nil
 }

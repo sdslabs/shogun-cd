@@ -2,17 +2,23 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
+	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
 func (h *Handler) HandleWebhook(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
 	slug := c.Param("slug")
 
 	bodyBytes, err := io.ReadAll(c.Request.Body)
@@ -22,7 +28,7 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-	_, err = h.webhook.Resolve(slug, c.Request.Header, bodyBytes)
+	_, err = h.webhook.Resolve(ctx, slug, c.Request.Header, bodyBytes)
 	if err != nil {
 		switch {
 		case errors.Is(err, webhooks.ErrBadWebhookHeader):
@@ -50,6 +56,9 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 }
 
 func (h *Handler) CreateWebhook(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
 	var req dto.HookInput
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -58,7 +67,7 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 	}
 
 	req.CreatedBy = apiutils.GetUserEmail(c)
-	data, err := h.webhook.Create(&req)
+	data, err := h.webhook.Create(ctx, &req)
 	if err != nil {
 		switch {
 		case errors.Is(err, webhooks.ErrInvalidPipeline):
@@ -84,16 +93,14 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 }
 
 func (h *Handler) DeleteWebhook(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
 	slug := c.Param("slug")
 
-	err := h.webhook.Delete(slug)
+	err := h.webhook.Delete(ctx, slug)
 	if err != nil {
-		switch {
-		case errors.Is(err, webhooks.ErrHookNotFound):
-			h.response.NotFound(c, err.Error(), err)
-		default:
-			h.response.ServerError(c, err)
-		}
+		h.response.ServerError(c, err)
 		return
 	}
 
@@ -101,6 +108,9 @@ func (h *Handler) DeleteWebhook(c *gin.Context) {
 }
 
 func (h *Handler) ListWebhooks(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
 	pipeline := c.Param("pipeline")
 	var filter webhooks.WebhookFilter
 	if pipeline == "" {
@@ -109,7 +119,51 @@ func (h *Handler) ListWebhooks(c *gin.Context) {
 		filter = webhooks.FilterByPipeline(pipeline)
 	}
 
-	data := h.webhook.Find(filter)
+	data := h.webhook.Find(ctx, filter)
 
 	h.response.Success(c, "All Webhooks", data)
+}
+
+func (h *Handler) DeactivateWebhook(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	slug := c.Param("slug")
+
+	err := h.webhook.SetStatus(ctx, slug, false)
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrRecordNotFound):
+			h.response.NotFound(c, "Webhook Not Found", err)
+			return
+
+		default:
+			h.response.ServerError(c, err)
+			return
+		}
+	}
+
+	h.response.Success(c, "Hook Deactivated", nil)
+}
+
+func (h *Handler) ActivateWebhook(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	slug := c.Param("slug")
+
+	err := h.webhook.SetStatus(ctx, slug, true)
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrRecordNotFound):
+			h.response.NotFound(c, "Webhook Not Found", err)
+			return
+
+		default:
+			h.response.ServerError(c, err)
+			return
+		}
+	}
+
+	h.response.Success(c, "Hook Activated", nil)
 }
