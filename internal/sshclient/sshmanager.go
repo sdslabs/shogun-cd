@@ -38,6 +38,11 @@ func (m *Manager) GetClient(target string) (*ssh.Client, error) {
 	if !exists {
 		return nil, fmt.Errorf("No client available")
 	}
+	if IsDeadClient(client) {
+		client.Close()
+		delete(m.clients, target)
+		return nil, fmt.Errorf("Client is dead")
+	}
 	return client, nil
 }
 
