@@ -53,7 +53,7 @@ func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	client, err := deps.SSHManager.GetClient(ss.Target)
 	// No client or dead client, create a new one
 	if err != nil {
-		sshkey, err := deps.SecretService.FetchSecret(targetInstance.Spec.AccessSecret)
+		sshkey, err := deps.SecretService.FetchSecret(ctx, targetInstance.Spec.AccessSecret)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to fetch secret for target %s: %v", ss.Target, err)
 		}
@@ -71,9 +71,15 @@ func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 
 	for _, file := range ss.Files {
 		src := InterpolateVariables(file.Src, deps.HookValues)
-		src = deps.SecretService.ResolveSecrets(src)
+		src, err = deps.SecretService.ResolveSecrets(ctx, src)
+		if err != nil {
+			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for source path %s: %v", file.Src, err)
+		}
 		dst := InterpolateVariables(file.Dst, deps.HookValues)
-		dst = deps.SecretService.ResolveSecrets(dst)
+		dst, err = deps.SecretService.ResolveSecrets(ctx, dst)
+		if err != nil {
+			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for destination path %s: %v", file.Dst, err)
+		}
 
 		srcFile, err := os.Open(filepath.Join(deps.GitService.GetRepoRoot(), src))
 		if err != nil {

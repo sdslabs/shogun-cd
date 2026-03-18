@@ -19,7 +19,7 @@ db-run:
 		-e POSTGRES_USER=$(DB_USER) \
 		-e POSTGRES_PASSWORD=$(DB_PASSWORD) \
 		-e POSTGRES_DB=$(DB_NAME) \
-		-d postgres:alpine
+		-d postgres:18.3-alpine3.23
 	@echo "Database is ready!"
 
 db-down:
