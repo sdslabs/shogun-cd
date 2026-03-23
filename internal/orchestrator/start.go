@@ -3,6 +3,9 @@ package orchestrator
 import (
 	"context"
 	"time"
+
+	"github.com/bmatcuk/doublestar/v4"
+	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 )
 
 func (o *orchestrator) Start() {
@@ -29,6 +32,47 @@ func (o *orchestrator) Start() {
 				copy(files, changedFiles)
 				o.RunIndexer()
 				// [TODO] Now run pipelines affected by these changed files
+				o.logger.LogInfo("Changed files: %v", files)
+				pipelines := o.Pipelines.Load()
+				triggeredPipelines := make(PipelineMap)
+				for _, p := range *pipelines {
+					i := -1
+					if len(p.Spec.Triggers) == 0 {
+						continue
+					} else {
+						if p.Spec.Triggers[0].Type == string(pipeline.GitChangesTriggerKind) {
+							i = 0
+						} else if len(p.Spec.Triggers) > 1 && p.Spec.Triggers[1].Type == string(pipeline.GitChangesTriggerKind) {
+							i = 1
+						}
+					}
+					if i != -1 {
+						for _, f := range files {
+							triggerd := false
+							for _, path := range p.Spec.Triggers[i].Paths {
+
+								match, err := doublestar.Match(path, f)
+								if err != nil {
+									o.logger.LogNewError("Error matching path pattern in pipeline %s: %v", p.Metadata.Name, err)
+									continue
+								}
+								if match {
+									triggeredPipelines[p.Metadata.Name] = p
+									o.logger.LogInfo("Pipeline %s queued to run by git trigger via change in file %s matching path pattern %s", p.Metadata.Name, f, path)
+									triggerd = true
+									break
+								}
+							}
+							if triggerd {
+								break
+							}
+						}
+					}
+				}
+				// Run matched pipelines
+				for _, p := range triggeredPipelines {
+					o.RunPipeline(p.Metadata.Name, pipeline.GitChangesTriggerKind, nil)
+				}
 			case <-ctx.Done():
 				return
 			}
