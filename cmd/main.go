@@ -11,6 +11,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
+	"github.com/kunalvirwal/shogun-cd/internal/users"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
@@ -39,11 +40,7 @@ func initServices() {
 		logger.LogNewError(err.Error())
 		return
 	}
-	store, err := store.NewStore(cfg, db)
-	if err != nil {
-		logger.LogNewError("Unable to Initialise Store : %v", err.Error())
-		return
-	}
+	store := store.NewStore(cfg, db)
 	encryption, err := encryption.NewService(cfg, logger)
 	if err != nil {
 		logger.LogNewError("Unable to Initialise Encryption service : %v", err.Error())
@@ -52,6 +49,9 @@ func initServices() {
 
 	// Initialize Secret Manager
 	secretService := secrets.NewSecretService(encryption, store, logger)
+
+	// Initialize User Service
+	userService := users.NewUserService(store, logger)
 
 	// Initialize Git service
 	gitService, err := git.NewGitService(logger, cfg)
@@ -73,19 +73,19 @@ func initServices() {
 
 	_ = app
 
-	if err := seedAdmin(store, cfg); err != nil {
+	if err := seedAdmin(userService, cfg); err != nil {
 		logger.LogNewError("Unable to Seed Admin account : %v", err.Error())
 		return
 	}
 
 	// Initialize webhook service
-	webhook := webhooks.NewWebhookService(logger, orch, store, encryption)
-	if err = webhook.Load(); err != nil {
+	webhookService := webhooks.NewWebhookService(logger, orch, store, encryption)
+	if err = webhookService.Load(); err != nil {
 		logger.LogNewError("Unable to load Webhooks : %v", err.Error())
 	}
 
 	// Initialize api
-	go api.StartAPIServer(logger, cfg, webhook, store, secretService)
+	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService)
 
 	<-make(chan struct{}) // Block forever
 }

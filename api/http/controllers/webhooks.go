@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
-	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
@@ -66,8 +65,12 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 		return
 	}
 
-	req.CreatedBy = apiutils.GetUserEmail(c)
-	data, err := h.webhook.Create(ctx, &req)
+	createdBy := apiutils.GetUserEmail(c)
+	data, err := h.webhook.Create(ctx, &webhooks.CreateParams{
+		Pipeline:  req.Pipeline,
+		Alias:     req.Alias,
+		CreatedBy: createdBy,
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, webhooks.ErrInvalidPipeline):
@@ -133,7 +136,7 @@ func (h *Handler) DeactivateWebhook(c *gin.Context) {
 	err := h.webhook.SetStatus(ctx, slug, false)
 	if err != nil {
 		switch {
-		case errors.Is(err, store.ErrRecordNotFound):
+		case errors.Is(err, webhooks.ErrHookNotFound):
 			h.response.NotFound(c, "Webhook Not Found", err)
 			return
 
@@ -155,7 +158,7 @@ func (h *Handler) ActivateWebhook(c *gin.Context) {
 	err := h.webhook.SetStatus(ctx, slug, true)
 	if err != nil {
 		switch {
-		case errors.Is(err, store.ErrRecordNotFound):
+		case errors.Is(err, webhooks.ErrHookNotFound):
 			h.response.NotFound(c, "Webhook Not Found", err)
 			return
 

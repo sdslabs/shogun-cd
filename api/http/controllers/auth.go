@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
-	"github.com/kunalvirwal/shogun-cd/internal/store"
+	"github.com/kunalvirwal/shogun-cd/internal/users"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,12 +18,16 @@ func (h *Handler) Register(c *gin.Context) {
 		h.response.BadRequest(c, "Bad Input", err)
 		return
 	}
+
 	ctx := c.Request.Context()
-	err := h.store.User.Create(ctx, &req)
+	err := h.user.Create(ctx, &users.CreateParams{
+		Email:    req.Email,
+		Password: req.Password,
+	})
 	if err != nil {
 		switch {
-		case errors.Is(err, store.ErrEmailTaken):
-			h.response.BadRequest(c, store.ErrEmailTaken.Error(), err)
+		case errors.Is(err, users.ErrEmailTaken):
+			h.response.BadRequest(c, users.ErrEmailTaken.Error(), err)
 			return
 
 		default:
@@ -43,12 +47,12 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.store.User.FindOne(c.Request.Context(), &dto.UserFilter{
+	user, err := h.user.FindOne(c.Request.Context(), &users.FilterParams{
 		Email: req.Email,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, store.ErrRecordNotFound):
+		case errors.Is(err, users.ErrUserNotFound):
 			h.response.Unauthorized(c, "Invalid email or password", err)
 			return
 		default:
@@ -57,7 +61,7 @@ func (h *Handler) Login(c *gin.Context) {
 		}
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
 			h.response.Unauthorized(c, "Invalid email or password", err)
@@ -68,11 +72,11 @@ func (h *Handler) Login(c *gin.Context) {
 		}
 	}
 	if !*user.IsActive {
-		h.response.Forbidden(c, "This Account is Suspended", store.ErrAccountSuspended)
+		h.response.Forbidden(c, "This Account is Suspended", users.ErrAccountSuspended)
 		return
 	}
 
-	role := apiutils.Role(user.Role)
+	role := user.Role
 	secret := h.config.ApiConfig.JWT.Secret
 	exp := h.config.ApiConfig.JWT.ExpirationHours
 

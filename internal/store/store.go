@@ -17,10 +17,10 @@ var (
 	ErrRecordNotFound = errors.New("Record Not Found")
 )
 
-func NewStore(cfg *config.Config, db *gorm.DB) (*Store, error) {
+func NewStore(cfg *config.Config, db *gorm.DB) *Store {
 	return &Store{
 		User:    newUserStore(db),
 		Webhook: newWebhookStore(db),
 		Secret:  newSecretStore(db),
-	}, nil
+	}
 }

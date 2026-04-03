@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/internal/models"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
 )
@@ -17,7 +16,7 @@ const (
 	SecretEntropy = 32
 )
 
-func (s *Service) Create(ctx context.Context, input *dto.HookInput) (*Webhook, error) {
+func (s *Service) Create(ctx context.Context, input *CreateParams) (*Webhook, error) {
 	var secret string
 	var err error
 
@@ -69,7 +68,9 @@ func (s *Service) Create(ctx context.Context, input *dto.HookInput) (*Webhook, e
 		hook.ID = dbHook.ID
 		hook.Slug = dbHook.Slug
 		hook.CreatedAt = dbHook.CreatedAt
-		hook.IsActive = *dbHook.IsActive
+		if dbHook.IsActive != nil {
+			hook.IsActive = *dbHook.IsActive
+		}
 
 		s.mu.Lock()
 		s.registry[newSlug] = hook
