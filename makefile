@@ -6,7 +6,8 @@ DB_NAME=shogun_db
 
 .PHONY: db-run db-down db-logs start
 
-start: db-run
+start:
+	make db-run || true
 	@echo "Starting Shogun-CD"
 	air
 
