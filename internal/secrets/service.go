@@ -14,10 +14,15 @@ import (
 
 type SecretService interface {
 	SetSecrets(ctx context.Context, in []CreateParams) error
-	FindMany(ctx context.Context, filter *FilterParams) ([]*models.Secret, error)
+	FindMany(ctx context.Context, filter *FilterParams) ([]Secret, error)
 	FetchSecret(ctx context.Context, name string) (string, error)
 	ResolveSecrets(ctx context.Context, name string) (string, error) // provides decrypted "value" of the secret
 	DeleteSecret(ctx context.Context, name string) error
+}
+
+type Secret struct {
+	Name  string `json:"name"`
+	Value string `json:"-"`
 }
 
 type service struct {
@@ -52,13 +57,26 @@ func (s *service) SetSecrets(ctx context.Context, in []CreateParams) error {
 	return s.store.Upsert(ctx, secrets)
 }
 
-func (s *service) FindMany(ctx context.Context, filter *FilterParams) ([]*models.Secret, error) {
+func (s *service) FindMany(ctx context.Context, filter *FilterParams) ([]Secret, error) {
 	if filter == nil {
 		filter = &FilterParams{}
 	}
-	return s.store.FindMany(ctx, &models.Secret{
+	data, err := s.store.FindMany(ctx, &models.Secret{
 		Name: filter.Name,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	secretArr := make([]Secret, len(data))
+	for k, v := range data {
+		secretArr[k] = Secret{
+			Name:  v.Name,
+			Value: v.Value,
+		}
+	}
+
+	return secretArr, nil
 }
 
 func (s *service) FetchSecret(ctx context.Context, name string) (string, error) {

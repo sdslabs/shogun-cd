@@ -38,16 +38,18 @@ func (u *userStore) Create(ctx context.Context, in *models.User) error {
 
 // escelates user's role to 'admin'
 func (u *userStore) MakeAdmin(ctx context.Context, email string) error {
-	_, err := gorm.G[models.User](u.db).
+	rows, err := gorm.G[models.User](u.db).
 		Where(&models.User{
 			Email: email,
 		}).
 		Updates(ctx, models.User{
 			Role: models.RoleAdmin,
 		})
-
 	if err != nil {
 		return err
+	}
+	if rows == 0 {
+		return ErrRecordNotFound
 	}
 	return nil
 }

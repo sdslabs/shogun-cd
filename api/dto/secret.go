@@ -1,13 +1,8 @@
 package dto
 
 type SecretInput struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-type Secret struct {
-	Name  string `json:"name"`
-	Value string `json:"-"`
+	Name  string `json:"name" binding:"required"`
+	Value string `json:"value" binding:"required"`
 }
 
 type SecretFilter struct {

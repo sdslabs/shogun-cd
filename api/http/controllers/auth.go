@@ -71,7 +71,7 @@ func (h *Handler) Login(c *gin.Context) {
 			return
 		}
 	}
-	if !*user.IsActive {
+	if !user.IsActive {
 		h.response.Forbidden(c, "This Account is Suspended", users.ErrAccountSuspended)
 		return
 	}
