@@ -12,7 +12,8 @@ func (s *Service) Find(ctx context.Context, filter WebhookFilter) []*Webhook {
 
 	for _, w := range s.registry {
 		if filter == nil || filter(w) {
-			results = append(results, w)
+			hookCopy := *w
+			results = append(results, &hookCopy)
 		}
 	}
 

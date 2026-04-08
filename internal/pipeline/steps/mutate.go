@@ -51,7 +51,16 @@ func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) (string, erro
 		}
 
 		change.Value = InterpolateVariables(change.Value, deps.HookValues)
+		change.Value, err = deps.SecretService.ResolveSecrets(ctx, change.Value)
+		if err != nil {
+			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.Value, err)
+		}
 		change.UpdateField = InterpolateVariables(change.UpdateField, deps.HookValues)
+		change.UpdateField, err = deps.SecretService.ResolveSecrets(ctx, change.UpdateField)
+		if err != nil {
+			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.UpdateField, err)
+		}
+
 		fieldPath := strings.Split(change.UpdateField, ".")
 		err = mutateYAMLField(&root, fieldPath, change.Value)
 		if err != nil {

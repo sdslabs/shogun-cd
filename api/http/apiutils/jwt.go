@@ -9,11 +9,11 @@ import (
 
 type Claims struct {
 	Email string `json:"email"`
-	Role  Role   `json:"role"`
+	Role  string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(email string, role Role, secret string, expiry int) (string, error) {
+func GenerateToken(email string, role string, secret string, expiry int) (string, error) {
 
 	claims := Claims{
 		Email: email,

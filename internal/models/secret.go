@@ -20,7 +20,7 @@ const (
 )
 
 type Secret struct {
-	ID    uuid.UUID `gorm:"column:id; type:uuid; default:gen_random_uuid(); primaryKey"`
+	ID    uuid.UUID `gorm:"column:id; type:uuid; default:gen_random_uuid(); primaryKey" json:"-"`
 	Name  string    `gorm:"column:name; uniqueIndex; not null"`
 	Value string    `gorm:"column:value; not null; type:text" json:"-"`
 

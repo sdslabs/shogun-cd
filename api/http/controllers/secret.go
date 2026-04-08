@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/dto"
+	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 )
 
 func (h *Handler) ListAllSecrets(c *gin.Context) {
@@ -15,7 +16,9 @@ func (h *Handler) ListAllSecrets(c *gin.Context) {
 		return
 	}
 
-	data, err := h.secret.FindMany(c.Request.Context(), &req)
+	data, err := h.secret.FindMany(c.Request.Context(), &secrets.FilterParams{
+		Name: req.Name,
+	})
 	if err != nil {
 		h.response.ServerError(c, err)
 		return
@@ -32,7 +35,15 @@ func (h *Handler) SetSecrets(c *gin.Context) {
 		return
 	}
 
-	if err := h.secret.SetSecrets(c.Request.Context(), req); err != nil {
+	secretArr := make([]secrets.CreateParams, len(req))
+	for i, secret := range req {
+		secretArr[i] = secrets.CreateParams{
+			Name:  secret.Name,
+			Value: secret.Value,
+		}
+	}
+
+	if err := h.secret.SetSecrets(c.Request.Context(), secretArr); err != nil {
 		h.response.ServerError(c, err)
 		return
 	}

@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/internal/encryption"
 	"github.com/kunalvirwal/shogun-cd/internal/models"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
@@ -14,11 +13,16 @@ import (
 )
 
 type SecretService interface {
-	SetSecrets(ctx context.Context, in []dto.SecretInput) error
-	FindMany(ctx context.Context, filter *dto.SecretFilter) ([]*dto.Secret, error)
+	SetSecrets(ctx context.Context, in []CreateParams) error
+	FindMany(ctx context.Context, filter *FilterParams) ([]Secret, error)
 	FetchSecret(ctx context.Context, name string) (string, error)
 	ResolveSecrets(ctx context.Context, name string) (string, error) // provides decrypted "value" of the secret
 	DeleteSecret(ctx context.Context, name string) error
+}
+
+type Secret struct {
+	Name  string `json:"name"`
+	Value string `json:"-"`
 }
 
 type service struct {
@@ -36,7 +40,7 @@ func NewSecretService(e encryption.EncryptionService, s *store.Store, l utils.Lo
 }
 
 // updates the value of a secret, creates new if no such secret exists
-func (s *service) SetSecrets(ctx context.Context, in []dto.SecretInput) error {
+func (s *service) SetSecrets(ctx context.Context, in []CreateParams) error {
 	secrets := make([]models.Secret, len(in))
 
 	for k, v := range in {
@@ -51,6 +55,28 @@ func (s *service) SetSecrets(ctx context.Context, in []dto.SecretInput) error {
 	}
 
 	return s.store.Upsert(ctx, secrets)
+}
+
+func (s *service) FindMany(ctx context.Context, filter *FilterParams) ([]Secret, error) {
+	if filter == nil {
+		filter = &FilterParams{}
+	}
+	data, err := s.store.FindMany(ctx, &models.Secret{
+		Name: filter.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	secretArr := make([]Secret, len(data))
+	for k, v := range data {
+		secretArr[k] = Secret{
+			Name:  v.Name,
+			Value: v.Value,
+		}
+	}
+
+	return secretArr, nil
 }
 
 func (s *service) FetchSecret(ctx context.Context, name string) (string, error) {
@@ -88,10 +114,6 @@ func (s *service) ResolveSecrets(ctx context.Context, input string) (string, err
 	}
 
 	return output, nil
-}
-
-func (s *service) FindMany(ctx context.Context, filter *dto.SecretFilter) ([]*dto.Secret, error) {
-	return s.store.FindMany(ctx, filter)
 }
 
 func (s *service) DeleteSecret(ctx context.Context, name string) error {

@@ -13,7 +13,11 @@ import (
 func (s *Service) Resolve(ctx context.Context, slug string, headers http.Header, body []byte) (*Webhook, error) {
 
 	s.mu.RLock()
-	hook, exists := s.registry[slug]
+	hookPtr, exists := s.registry[slug]
+	var hook Webhook
+	if exists {
+		hook = *hookPtr
+	}
 	s.mu.RUnlock()
 
 	if !exists {
@@ -45,5 +49,5 @@ func (s *Service) Resolve(ctx context.Context, slug string, headers http.Header,
 		return nil, err
 	}
 
-	return hook, nil
+	return &hook, nil
 }

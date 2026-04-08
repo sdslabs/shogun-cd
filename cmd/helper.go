@@ -4,20 +4,19 @@ import (
 	"context"
 	"errors"
 
-	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
-	"github.com/kunalvirwal/shogun-cd/internal/store"
+	"github.com/kunalvirwal/shogun-cd/internal/users"
 )
 
 // makes the admin user upon startup (ignores if admin exists)
-func seedAdmin(s *store.Store, cfg *config.Config) error {
+func seedAdmin(u users.Service, cfg *config.Config) error {
 	ctx := context.Background()
-	if err := s.User.Create(ctx, &dto.LoginInput{
+	if err := u.Create(ctx, &users.CreateParams{
 		Email:    cfg.ApiConfig.Admin.Email,
 		Password: cfg.ApiConfig.Admin.Password,
 	}); err != nil {
 		switch {
-		case errors.Is(err, store.ErrEmailTaken):
+		case errors.Is(err, users.ErrEmailTaken):
 			return nil
 
 		default:
@@ -25,9 +24,7 @@ func seedAdmin(s *store.Store, cfg *config.Config) error {
 		}
 	}
 
-	if err := s.User.MakeAdmin(ctx, &dto.LoginInput{
-		Email: cfg.ApiConfig.Admin.Email,
-	}); err != nil {
+	if err := u.MakeAdmin(ctx, cfg.ApiConfig.Admin.Email); err != nil {
 		return err
 	}
 

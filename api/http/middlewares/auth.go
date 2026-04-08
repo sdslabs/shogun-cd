@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kunalvirwal/shogun-cd/api/http/apiutils"
+	"github.com/kunalvirwal/shogun-cd/internal/models"
 )
 
 func (m *Manager) AuthRequired(c *gin.Context) {
@@ -41,7 +42,7 @@ func (m *Manager) AuthRequired(c *gin.Context) {
 func (m *Manager) VerifyAdmin(c *gin.Context) {
 	role := apiutils.GetUserRole(c)
 
-	if role != apiutils.RoleAdmin {
+	if role != models.RoleAdmin {
 		m.response.Forbidden(c, "Access denied: Admin privileges required", nil)
 		c.Abort()
 		return

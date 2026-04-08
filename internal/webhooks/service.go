@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kunalvirwal/shogun-cd/api/dto"
 	"github.com/kunalvirwal/shogun-cd/internal/encryption"
 	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
@@ -16,7 +15,7 @@ import (
 )
 
 type WebhookService interface {
-	Create(ctx context.Context, input *dto.HookInput) (*Webhook, error)
+	Create(ctx context.Context, input *CreateParams) (*Webhook, error)
 	Resolve(ctx context.Context, slug string, headers http.Header, body []byte) (*Webhook, error)
 	Delete(ctx context.Context, slug string) error
 	Find(ctx context.Context, filter WebhookFilter) []*Webhook
