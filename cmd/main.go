@@ -60,7 +60,7 @@ func initServices() {
 	}
 
 	// Initialize Pipeline service
-	pipelineService := pipeline.NewPipelineService(logger, gitService, secretService)
+	pipelineService := pipeline.NewPipelineService(logger, gitService, secretService, store.Pipeline)
 
 	// Initialize Target service
 	targetService := target.NewTargetService(logger, gitService)

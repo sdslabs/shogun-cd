@@ -40,6 +40,8 @@ func Connect(cfg *config.Config, logger utils.Logger) (*gorm.DB, error) {
 		&models.User{},
 		&models.Webhook{},
 		&models.Secret{},
+		&models.PipelineRun{},
+		&models.PipelineRunStep{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("migration failed : %w", err)
