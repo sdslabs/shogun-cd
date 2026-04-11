@@ -4,6 +4,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
+	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/users"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
@@ -16,9 +17,10 @@ type Handler struct {
 	webhook  webhooks.WebhookService
 	user     users.Service
 	secret   secrets.SecretService
+	store    *store.Store
 }
 
-func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService) *Handler {
+func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store) *Handler {
 	return &Handler{
 		logger:   l,
 		config:   cfg,
@@ -26,5 +28,6 @@ func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder
 		webhook:  wh,
 		user:     u,
 		secret:   secrets,
+		store:    store,
 	}
 }

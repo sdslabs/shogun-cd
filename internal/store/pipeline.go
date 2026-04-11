@@ -2,13 +2,15 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/kunalvirwal/shogun-cd/internal/models"
 	"gorm.io/gorm"
 )
 
 type PipelineStore interface {
-	SavePipelineRunWithSteps(ctx context.Context, in *models.PipelineRunDetails) error
+	SavePipelineRunWithSteps(ctx context.Context, in *models.PipelineRun) error
+	FetchPipelineRunDetails(ctx context.Context, pipeline string, runID uint) ([]models.PipelineRun, error)
 }
 
 type pipelineStore struct {
@@ -21,28 +23,37 @@ func newPipelineStore(db *gorm.DB) PipelineStore {
 	}
 }
 
-func (p *pipelineStore) SavePipelineRunWithSteps(ctx context.Context, in *models.PipelineRunDetails) error {
+func (p *pipelineStore) SavePipelineRunWithSteps(ctx context.Context, in *models.PipelineRun) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := gorm.G[models.PipelineRun](tx).
-			Create(ctx, &in.Run)
-		if err != nil {
-			return err
-		}
+	return gorm.G[models.PipelineRun](p.db).
+		Create(ctx, in)
+}
 
-		for i := range in.Steps {
-			in.Steps[i].RunID = in.Run.ID
-		}
+func (p *pipelineStore) FetchPipelineRunDetails(ctx context.Context, pipeline string, runID uint) ([]models.PipelineRun, error) {
+	filter := models.PipelineRun{
+		Pipeline: pipeline,
+		ID:       runID,
+	}
 
-		err = gorm.G[[]models.PipelineRunStep](tx).
-			Create(ctx, &in.Steps)
-		if err != nil {
-			return err
-		}
+	runs, err := gorm.G[models.PipelineRun](p.db).
+		Preload("Steps", func(db gorm.PreloadBuilder) error {
+			db.Order(fmt.Sprintf("%v asc", models.PipelineRunStepColStepIndex))
+			return nil
+		}).
+		Where(&filter).
+		Order(fmt.Sprintf("%v desc", models.PipelineRunStepColStartedAt)).
+		Find(ctx)
 
-		return nil
-	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(runs) == 0 {
+		return nil, ErrRecordNotFound
+	}
+
+	return runs, nil
 }

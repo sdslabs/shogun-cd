@@ -6,3 +6,4 @@ Dockerfile
 ssh/
 .ssh/
 tmp/
+.DS_Store

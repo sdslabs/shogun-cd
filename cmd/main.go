@@ -85,7 +85,7 @@ func initServices() {
 	}
 
 	// Initialize api
-	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService)
+	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService, store)
 
 	<-make(chan struct{}) // Block forever
 }

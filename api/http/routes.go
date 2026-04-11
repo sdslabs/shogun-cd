@@ -55,15 +55,15 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		system.GET("/pipelines", h.ListAllPipelines)
 	}
 
-	// [TODO] pipeline data routes are not implemented yet
 	pipelines := router.Group("/pipelines/:pipeline")
 	pipelines.Use(m.AuthRequired)
 	{
 		runs := pipelines.Group("/runs")
 		{
+			runs.GET("/:run_id", h.ListPipelineRuns)
 			runs.GET("", h.ListPipelineRuns)
+			// [TODO] streaming routes not implemented yet
 			runs.GET("/:run_id/logs", h.StreamPipelineRunLogs)
-			runs.GET("/:run_id/steps", h.ListPipelineRunSteps)
 		}
 	}
 }
