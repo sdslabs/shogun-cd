@@ -8,9 +8,10 @@ import (
 )
 
 type Store struct {
-	User    UserStore
-	Webhook WebhookStore
-	Secret  SecretStore
+	User     UserStore
+	Webhook  WebhookStore
+	Secret   SecretStore
+	Pipeline PipelineStore
 }
 
 var (
@@ -19,8 +20,9 @@ var (
 
 func NewStore(cfg *config.Config, db *gorm.DB) *Store {
 	return &Store{
-		User:    newUserStore(db),
-		Webhook: newWebhookStore(db),
-		Secret:  newSecretStore(db),
+		User:     newUserStore(db),
+		Webhook:  newWebhookStore(db),
+		Secret:   newSecretStore(db),
+		Pipeline: newPipelineStore(db),
 	}
 }

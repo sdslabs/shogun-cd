@@ -3,6 +3,7 @@ package pipeline
 import (
 	"github.com/kunalvirwal/shogun-cd/internal/git"
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
+	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
@@ -18,12 +19,14 @@ type Service struct {
 	logger        utils.Logger
 	gitService    git.GitService
 	secretService secrets.SecretService
+	store         store.PipelineStore
 }
 
-func NewPipelineService(logger utils.Logger, gitService git.GitService, secretService secrets.SecretService) *Service {
+func NewPipelineService(logger utils.Logger, gitService git.GitService, secretService secrets.SecretService, store store.PipelineStore) *Service {
 	return &Service{
 		logger:        logger,
 		gitService:    gitService,
 		secretService: secretService,
+		store:         store,
 	}
 }

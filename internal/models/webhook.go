@@ -23,7 +23,7 @@ type Webhook struct {
 	ID        string `gorm:"column:id; primaryKey; type:uuid; default:gen_random_uuid()"`
 	Slug      string `gorm:"column:slug; uniqueIndex; not null; type:varchar(50)"`
 	Secret    string `gorm:"column:secret; not null" json:"-"`
-	Pipeline  string `gorm:"column:pipeline; index; not null"`
+	Pipeline  string `gorm:"column:pipeline; index; not null; type:varchar(50)"`
 	Alias     string `gorm:"column:alias; type:varchar(100)"`
 	CreatedBy string `gorm:"column:created_by; type:varchar(100)"`
 	IsActive  *bool  `gorm:"column:is_active; default:true"`

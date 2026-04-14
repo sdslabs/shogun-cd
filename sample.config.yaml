@@ -22,3 +22,4 @@ database:
     ssl_mode: "disable"
     master_key: "qwertyuiop"
     encryption_salt: "salty-salt"
+    

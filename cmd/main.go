@@ -60,7 +60,7 @@ func initServices() {
 	}
 
 	// Initialize Pipeline service
-	pipelineService := pipeline.NewPipelineService(logger, gitService, secretService)
+	pipelineService := pipeline.NewPipelineService(logger, gitService, secretService, store.Pipeline)
 
 	// Initialize Target service
 	targetService := target.NewTargetService(logger, gitService)
@@ -85,7 +85,7 @@ func initServices() {
 	}
 
 	// Initialize api
-	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService)
+	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService, store)
 
 	<-make(chan struct{}) // Block forever
 }
