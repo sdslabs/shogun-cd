@@ -13,6 +13,7 @@ api:
     jwt:
         secret: "jwt-secret"
         expiration_hours: 1
+    enable_api_spec: true
 database:
     host: "127.0.0.1"
     port: 5432

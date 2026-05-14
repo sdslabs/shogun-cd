@@ -1,0 +1,864 @@
+openapi: 3.0.3
+info:
+  title: Shogun-CD
+  version: 1.0
+  description: "[TODO] shogun tagline"
+servers:
+  - url: http://localhost:7007
+
+tags:
+  - name: public/docs
+    x-displayName: Documentation
+  - name: public/auth
+    x-displayName: Authentication
+  - name: public/hook
+    x-displayName: Webhooks
+  - name: admin/hook
+    x-displayName: Webhooks
+  - name: admin/secrets
+    x-displayName: Secrets
+  - name: pipeline/runs
+    x-displayName: Runs
+
+x-tagGroups:
+  - name: Public
+    tags:
+      - public/docs
+      - public/auth
+      - public/hook
+  - name: Admin
+    tags:
+      - admin/hook
+      - admin/secrets
+  - name: Pipeline
+    tags:
+      - pipeline/runs
+
+paths:
+  /docs/:
+    get:
+      tags: [public/docs]
+      summary: API Reference
+      description: Render this Documentation page.
+      responses:
+        '200':
+          description: API docs page rendered
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /docs/spec:
+    get:
+      tags: [public/docs]
+      summary: OpenAPI Spec
+      description: Download the OpenAPI YAML specification used by the docs page.
+      responses:
+        '200':
+          description: OpenAPI spec returned
+          content:
+            application/yaml:
+              schema:
+                type: string
+
+  /auth/register:
+    post:
+      tags: [public/auth]
+      summary: Register
+      description: Create a new user account with email and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessNoDataResponse'
+        '400':
+          description: Bad input or email taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [public/auth]
+      summary: Login
+      description: Authenticate a user and return a JWT session token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Logged in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /hook:
+    get:
+      tags: [public/hook]
+      summary: Get All
+      description: List all configured webhooks visible to the authenticated user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Webhooks listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /hook/{pipeline}:
+    get:
+      tags: [public/hook]
+      summary: Get
+      description: List webhooks filtered by the given pipeline name.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: pipeline
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhooks listed for pipeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /hook/{slug}:
+    post:
+      tags: [public/hook]
+      summary: Webhook
+      description: Trigger the webhook by slug using either a raw token header or an HMAC signature header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Shogun-Token
+          required: false
+          description: Raw webhook secret token; provide this OR `X-Shogun-HMAC`.
+          schema:
+            type: string
+        - in: header
+          name: X-Shogun-HMAC
+          required: false
+          description: HMAC-SHA256 signature of the raw request body in `sha256=<hex>` format; provide this OR `X-Shogun-Token`.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessNoDataResponse'
+        '400':
+          description: Bad webhook header or invalid JSON
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Payload authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Webhook inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/hook:
+    post:
+      tags: [admin/hook]
+      summary: Create
+      description: Create a new webhook for a pipeline and return its one-time secret.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HookInput'
+      responses:
+        '201':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWebhookResponse'
+        '400':
+          description: Bad input or invalid pipeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/hook/{slug}/pause:
+    patch:
+      tags: [admin/hook]
+      summary: Pause
+      description: Deactivate the webhook identified by slug.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Hook deactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessNoDataResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/hook/{slug}/resume:
+    patch:
+      tags: [admin/hook]
+      summary: Resume
+      description: Activate the webhook identified by slug.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Hook activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessNoDataResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/hook/{slug}:
+    delete:
+      tags: [admin/hook]
+      summary: Delete
+      description: Permanently delete the webhook identified by slug.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessNoDataResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/secrets:
+    get:
+      tags: [admin/secrets]
+      summary: Get All
+      description: List all secret names.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: name
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Secrets listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretListResponse'
+        '400':
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags: [admin/secrets]
+      summary: Set
+      description: Create or Update multiple secrets in a single request.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/SecretInput'
+      responses:
+        '201':
+          description: Secrets created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessNoDataResponse'
+        '400':
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/secrets/{secret}:
+    delete:
+      tags: [admin/secrets]
+      summary: Delete
+      description: Delete a secret by its name.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: secret
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Secret deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessNoDataResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /pipelines/{pipeline}/runs:
+    get:
+      tags: [pipeline/runs]
+      summary: Run Steps
+      description: List all Run Details for a particular pipeline.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: pipeline
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pipeline runs listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineRunsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Runs not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /pipelines/{pipeline}/runs/{run_id}:
+    get:
+      tags: [pipeline/runs]
+      summary: Run Logs
+      description: Fetch Details for a specific Pipeline Run, identified by the Run Number
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: pipeline
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Pipeline run returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineRunsResponse'
+        '400':
+          description: Invalid run id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    HookInput:
+      type: object
+      required: [pipeline, alias]
+      properties:
+        pipeline:
+          type: string
+        alias:
+          type: string
+          minLength: 3
+          maxLength: 32
+
+    SecretInput:
+      type: object
+      required: [name, value]
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        message:
+          type: string
+        error:
+          type: string
+          description: Present only in debug mode.
+
+    SuccessNoDataResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          nullable: true
+
+    LoginData:
+      type: object
+      required: [token, expiration_hours]
+      properties:
+        token:
+          type: string
+        expiration_hours:
+          type: integer
+
+    LoginResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/LoginData'
+
+    Webhook:
+      type: object
+      required: [slug, pipeline_name, alias, created_by, created_at, is_active]
+      properties:
+        slug:
+          type: string
+        pipeline_name:
+          type: string
+        alias:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+
+    CreateWebhookData:
+      type: object
+      required: [webhook, secret]
+      properties:
+        webhook:
+          $ref: '#/components/schemas/Webhook'
+        secret:
+          type: string
+
+    CreateWebhookResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/CreateWebhookData'
+
+    WebhookListResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+
+    Secret:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    SecretListResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Secret'
+
+    PipelineRunStep:
+      type: object
+      required: [step_index, step_type, status, logs, started_at]
+      properties:
+        step_index:
+          type: integer
+        step_type:
+          type: string
+        status:
+          type: string
+          enum: [in_progress, succeeded, failed, skipped]
+        logs:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    PipelineRun:
+      type: object
+      required: [id, pipeline, trigger_kind, started_at, steps]
+      properties:
+        id:
+          type: integer
+        pipeline:
+          type: string
+        trigger_kind:
+          type: string
+        success:
+          type: boolean
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PipelineRunStep'
+
+    PipelineRunsResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PipelineRun'

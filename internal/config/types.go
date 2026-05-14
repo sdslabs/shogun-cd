@@ -16,9 +16,10 @@ type Git struct {
 }
 
 type Api struct {
-	Admin Admin `yaml:"admin"`
-	Port  int   `yaml:"port"`
-	JWT   JWT   `yaml:"jwt"`
+	Admin      Admin `yaml:"admin"`
+	Port       int   `yaml:"port"`
+	JWT        JWT   `yaml:"jwt"`
+	EnableSpec bool  `yaml:"enable_api_spec"`	
 }
 
 type Admin struct {
