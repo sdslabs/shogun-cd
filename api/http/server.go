@@ -8,6 +8,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/api/http/controllers"
 	"github.com/kunalvirwal/shogun-cd/api/http/middlewares"
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
+	"github.com/kunalvirwal/shogun-cd/docs"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
@@ -24,6 +25,10 @@ func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookS
 	h := controllers.NewHandler(logger, cfg, responder, w, u, secrets, store)
 
 	initRoutes(r, m, h)
+
+	if cfg.ApiConfig.EnableSpec {
+		docs.Serve(r)
+	}
 
 	if err := r.Run(fmt.Sprintf(":%v", cfg.ApiConfig.Port)); err != nil {
 		logger.LogError(err)
