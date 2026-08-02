@@ -1,5 +1,6 @@
 # Shogun-CD
 
+
 **A simple, self-hosted continuous delivery tool for Git-based deployments.**
 
 Shogun-CD watches a Git repository and deploys changes to your servers via SSH and SFTP. Pipelines and targets are written in YAML, so your delivery setup stays close to the code and manifests it manages.
@@ -28,9 +29,9 @@ Shogun helps one Git repository coordinate deployments across many servers.
                           +-----------------------------+
                                          |
                               clone, poll, and index
-                                         v
-              webhook + build values
-  +-----------+                    +-----------+
+                                         |
+                      webhook            v
+  +-----------+  + build values.   +-----------+
   | CI system |------------------->| Shogun-CD |
   +-----------+                    +-----------+
                                          |
