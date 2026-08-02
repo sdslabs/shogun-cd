@@ -117,4 +117,9 @@ When API docs are enabled, open `/docs/` in your browser.
 - API keys
 - Live pipeline logs
 
+## License
+
 Licensed under [Apache License 2.0](LICENSE). See [NOTICE](NOTICE).
+
+Created with ❤️ by SDSLabs!
+
