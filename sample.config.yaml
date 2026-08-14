@@ -1,3 +1,6 @@
+# Reference template for Shogun-CD configuration.
+# The setup script (curl ... | sh) mirrors every key below — replace placeholders with your values.
+
 debug: true
 
 data_dir: "/var/lib/shogun/" # Use absolute path or could provide the current root dir of the project
