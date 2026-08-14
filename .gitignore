@@ -8,5 +8,3 @@ ssh/
 tmp/
 .DS_Store
 .commandcode/
-node_modules/
-dist/
