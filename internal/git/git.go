@@ -5,23 +5,39 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...string) ([]byte, error) {
+	args = append([]string{"-c", "core.hooksPath=/dev/null"}, args...)
+
 	cmd := exec.CommandContext(ctx, gitPath, args...)
 
 	// Only set working directory for non-clone commands
 	// git clone creates the directory, so we can't cd into it first
-	if len(args) > 0 && args[0] != "clone" {
+	isClone := false
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		isClone = a == "clone"
+		break
+	}
+	if !isClone {
 		cmd.Dir = r.CloneDir
 	}
 
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_TEMPLATE_DIR=/dev/null",
+	)
 	if r.DeployKeys != nil {
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(cmd.Env,
 			"GIT_SSH_COMMAND=ssh -i "+r.DeployKeys.PrivatePath+" -o IdentitiesOnly=yes -F /dev/null -o StrictHostKeyChecking=no",
 		)
 	} else {
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(cmd.Env,
 			"GIT_SSH_COMMAND=ssh -o IdentitiesOnly=yes -o IdentityFile=/dev/null -F /dev/null -o StrictHostKeyChecking=no",
 		)
 	}
