@@ -826,7 +826,7 @@ components:
 
     PipelineRun:
       type: object
-      required: [id, pipeline, trigger_kind, started_at, steps]
+      required: [id, pipeline, trigger_kind, status, started_at, steps]
       properties:
         id:
           type: integer
@@ -834,6 +834,9 @@ components:
           type: string
         trigger_kind:
           type: string
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed, cancelled]
         success:
           type: boolean
           nullable: true
