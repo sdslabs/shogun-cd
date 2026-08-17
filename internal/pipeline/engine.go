@@ -56,6 +56,7 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targe
 	runData := &models.PipelineRun{
 		Pipeline:    pipeline.Metadata.Name,
 		TriggerKind: string(trigger),
+		Status:      models.PipelineRunStatusRunning,
 		StartedAt:   time.Now(),
 		Steps:       make([]models.PipelineRunStep, 0, len(pipeline.Spec.Steps)),
 	}
@@ -119,6 +120,11 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targe
 	fmt.Println(output)
 
 	runData.Success = &success
+	if success {
+		runData.Status = models.PipelineRunStatusSucceeded
+	} else {
+		runData.Status = models.PipelineRunStatusFailed
+	}
 	now := time.Now()
 	runData.FinishedAt = &now
 	p.store.SavePipelineRunWithSteps(ctx, runData)

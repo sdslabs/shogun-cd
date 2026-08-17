@@ -12,15 +12,42 @@ const (
 	PipelineRunColID          = "id"
 	PipelineRunColPipeline    = "pipeline"
 	PipelineRunColTriggerKind = "trigger_kind"
+	PipelineRunColStatus      = "status"
 	PipelineRunColSuccess     = "success"
 	PipelineRunColStartedAt   = "started_at"
 	PipelineRunColFinishedAt  = "finished_at"
 )
 
+// PipelineRunStatus represents the lifecycle state of an execution. Success is
+// retained separately for backwards compatibility with existing API clients.
+type PipelineRunStatus string
+
+const (
+	PipelineRunStatusQueued    PipelineRunStatus = "queued"  // not yet being used
+	PipelineRunStatusRunning   PipelineRunStatus = "running"
+	PipelineRunStatusSucceeded PipelineRunStatus = "succeeded"
+	PipelineRunStatusFailed    PipelineRunStatus = "failed"
+	PipelineRunStatusCancelled PipelineRunStatus = "cancelled"  // not yet being used
+)
+
+func (s PipelineRunStatus) IsValid() bool {
+	switch s {
+	case PipelineRunStatusQueued,
+		PipelineRunStatusRunning,
+		PipelineRunStatusSucceeded,
+		PipelineRunStatusFailed,
+		PipelineRunStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
 type PipelineRun struct {
 	ID          uint              `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	Pipeline    string            `gorm:"column:pipeline; index; not null; type:varchar(50)" json:"pipeline"`
 	TriggerKind string            `gorm:"column:trigger_kind; not null; type:varchar(32)" json:"trigger_kind"`
+	Status      PipelineRunStatus `gorm:"column:status; not null; default:queued; type:varchar(32); index" json:"status"`
 	Success     *bool             `gorm:"column:success" json:"success"`
 	StartedAt   time.Time         `gorm:"column:started_at; not null; index" json:"started_at"`
 	FinishedAt  *time.Time        `gorm:"column:finished_at; index" json:"finished_at,omitempty"`
