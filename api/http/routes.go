@@ -47,7 +47,6 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		}
 	}
 
-	// [TODO] system routes are not implemented yet
 	system := router.Group("/system")
 	system.Use(m.AuthRequired)
 	{

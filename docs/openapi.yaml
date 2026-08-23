@@ -17,6 +17,8 @@ tags:
     x-displayName: Webhooks
   - name: admin/secrets
     x-displayName: Secrets
+  - name: system/resources
+    x-displayName: Resources
   - name: pipeline/runs
     x-displayName: Runs
 
@@ -32,6 +34,7 @@ x-tagGroups:
       - admin/secrets
   - name: Pipeline
     tags:
+      - system/resources
       - pipeline/runs
 
 paths:
@@ -555,6 +558,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /system/pipelines:
+    get:
+      tags: [system/resources]
+      summary: List Pipelines
+      description: List summaries of the pipelines currently indexed from the configured Git repository.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Indexed pipelines listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system/targets:
+    get:
+      tags: [system/resources]
+      summary: List Targets
+      description: List summaries of the targets currently indexed from the configured Git repository.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Indexed targets listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /pipelines/{pipeline}/runs:
     get:
       tags: [pipeline/runs]
@@ -802,6 +847,95 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Secret'
+
+    PipelineTrigger:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [ci_webhook, git_changes]
+        paths:
+          type: array
+          items:
+            type: string
+
+    PipelineStepSummary:
+      type: object
+      required: [index, type]
+      properties:
+        index:
+          type: integer
+          minimum: 0
+        type:
+          type: string
+          enum: [mutate, sync, exec, apply]
+        trigger_when:
+          type: string
+          enum: [ci_webhook, git_changes]
+        target:
+          type: string
+
+    PipelineSummary:
+      type: object
+      required: [name, enabled, triggers, steps]
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PipelineTrigger'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PipelineStepSummary'
+
+    PipelineListResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PipelineSummary'
+
+    TargetSummary:
+      type: object
+      required: [name, type, host, user, port]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [server, cluster]
+        host:
+          type: string
+        user:
+          type: string
+        port:
+          type: integer
+
+    TargetListResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetSummary'
 
     PipelineRunStep:
       type: object
