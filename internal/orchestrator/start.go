@@ -71,7 +71,9 @@ func (o *orchestrator) Start() {
 				}
 				// Run matched pipelines
 				for _, p := range triggeredPipelines {
-					o.RunPipeline(p.Metadata.Name, pipeline.GitChangesTriggerKind, nil)
+					if _, err := o.RunPipeline(ctx, p.Metadata.Name, pipeline.GitChangesTriggerKind, nil); err != nil {
+						o.logger.LogNewError("Failed to start pipeline %s: %v", p.Metadata.Name, err)
+					}
 				}
 			case <-ctx.Done():
 				return
