@@ -23,6 +23,17 @@ func (h *Handler) ListAllTargets(c *gin.Context) {
 
 func (h *Handler) ListAllPipelines(c *gin.Context) {
 	pipelines := h.orch.ListPipelines()
+	pipelineNames := make([]string, 0, len(pipelines))
+	for _, resource := range pipelines {
+		pipelineNames = append(pipelineNames, resource.Metadata.Name)
+	}
+
+	latestRuns, err := h.store.Pipeline.FetchLatestPipelineRuns(c.Request.Context(), pipelineNames)
+	if err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
+
 	data := make([]dto.PipelineSummary, 0, len(pipelines))
 	for _, resource := range pipelines {
 		triggers := make([]dto.PipelineTrigger, 0, len(resource.Spec.Triggers))
@@ -47,12 +58,26 @@ func (h *Handler) ListAllPipelines(c *gin.Context) {
 			steps = append(steps, summary)
 		}
 
-		data = append(data, dto.PipelineSummary{
+		summary := dto.PipelineSummary{
 			Name:     resource.Metadata.Name,
 			Enabled:  resource.Metadata.Enabled,
 			Triggers: triggers,
 			Steps:    steps,
-		})
+		}
+
+		latestRun := latestRuns[resource.Metadata.Name]
+		if latestRun != nil {
+			summary.LastRun = &dto.PipelineRunSummary{
+				ID:          latestRun.ID,
+				TriggerKind: latestRun.TriggerKind,
+				Status:      string(latestRun.Status),
+				Success:     latestRun.Success,
+				StartedAt:   latestRun.StartedAt,
+				FinishedAt:  latestRun.FinishedAt,
+			}
+		}
+
+		data = append(data, summary)
 	}
 
 	h.response.Success(c, "All Pipelines", data)

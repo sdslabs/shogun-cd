@@ -878,7 +878,7 @@ components:
 
     PipelineSummary:
       type: object
-      required: [name, enabled, triggers, steps]
+      required: [name, enabled, triggers, steps, last_run]
       properties:
         name:
           type: string
@@ -892,6 +892,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PipelineStepSummary'
+        last_run:
+          allOf:
+            - $ref: '#/components/schemas/PipelineRunSummary'
+          nullable: true
+
+    PipelineRunSummary:
+      type: object
+      required: [id, trigger_kind, status, started_at]
+      properties:
+        id:
+          type: integer
+        trigger_kind:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed, cancelled]
+        success:
+          type: boolean
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
 
     PipelineListResponse:
       type: object

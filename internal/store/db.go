@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -45,6 +46,18 @@ func Connect(cfg *config.Config, logger utils.Logger) (*gorm.DB, error) {
 	)
 	if err != nil {
 		return nil, fmt.Errorf("migration failed : %w", err)
+	}
+
+	// Older installations may contain users created before a default role was
+	// enforced. Backfill only missing roles so explicit admin roles are kept.
+	rows, err := gorm.G[models.User](db).
+		Where(fmt.Sprintf("%s = ? OR %s IS NULL", models.UserColRole, models.UserColRole), "").
+		Update(context.Background(), models.UserColRole, models.RoleUser)
+	if err != nil {
+		return nil, fmt.Errorf("user role backfill failed : %w", err)
+	}
+	if rows > 0 {
+		logger.LogInfo("Backfilled default role for %d user(s)", rows)
 	}
 
 	return db, nil
