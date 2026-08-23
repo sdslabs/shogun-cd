@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { usePipeline, usePipelineRuns } from "@/features/pipelines/hooks"
+import { PipelineDefinition } from "@/features/pipelines/pipeline-definition"
 import { formatDateTime, formatDuration, formatRelativeTime } from "@/lib/format"
 import type { PipelineRun } from "@/lib/api/types"
 import { pluralize, titleCase } from "@/lib/utils"
@@ -45,6 +46,8 @@ export function PipelinePage() {
             <DetailBlock icon={Workflow} label="Source of truth"><p className="text-xs text-muted-foreground">Read-only · managed in Git</p></DetailBlock>
           </div>
         </section>
+
+        <PipelineDefinition steps={pipeline.steps} />
 
         <section>
           <div className="mb-4 flex items-end justify-between"><div><p className="text-[10px] font-semibold tracking-[.16em] text-muted-foreground uppercase">History</p><h2 className="mt-1 text-lg font-semibold tracking-[-0.025em]">Past runs</h2></div><span className="text-xs text-muted-foreground">{pluralize(runsQuery.data?.length ?? 0, "execution")}</span></div>

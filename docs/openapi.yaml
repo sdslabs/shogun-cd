@@ -862,7 +862,7 @@ components:
 
     PipelineStepSummary:
       type: object
-      required: [index, type]
+      required: [index, type, config]
       properties:
         index:
           type: integer
@@ -874,6 +874,55 @@ components:
           type: string
           enum: [ci_webhook, git_changes]
         target:
+          type: string
+        config:
+          $ref: '#/components/schemas/PipelineStepConfig'
+
+    PipelineStepConfig:
+      type: object
+      description: Unresolved, read-only values from the step manifest. Placeholders are returned without resolving webhook values or secrets.
+      additionalProperties: true
+      properties:
+        trigger_when:
+          type: string
+          enum: [ci_webhook, git_changes]
+        target:
+          type: string
+        files:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - $ref: '#/components/schemas/PipelineSyncStepDTO'
+        commands:
+          type: array
+          items:
+            type: string
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PipelineMutateStepDTO'
+
+    PipelineSyncStepDTO:
+      type: object
+      description: Dedicated object because sync file entries contain both src and dst, unlike plain string file lists.
+      required: [src, dst]
+      properties:
+        src:
+          type: string
+        dst:
+          type: string
+
+    PipelineMutateStepDTO:
+      type: object
+      description: Dedicated object because each mutate entry contains file, update_field, and value fields.
+      required: [file, update_field, value]
+      properties:
+        file:
+          type: string
+        update_field:
+          type: string
+        value:
           type: string
 
     PipelineSummary:
@@ -935,7 +984,7 @@ components:
 
     TargetSummary:
       type: object
-      required: [name, type, host, user, port]
+      required: [name, type, host, user, port, access_secret]
       properties:
         name:
           type: string
@@ -948,6 +997,9 @@ components:
           type: string
         port:
           type: integer
+        access_secret:
+          type: string
+          description: Name of the secret referenced by the target's access-key-secret field. The secret value is never returned.
 
     TargetListResponse:
       type: object

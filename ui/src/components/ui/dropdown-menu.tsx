@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronRight, Circle } from "lucide-react"
+import { Check, ChevronRight } from "lucide-react"
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
@@ -57,8 +57,7 @@ function DropdownMenuCheckboxItem({ className, children, checked, ...props }: Re
 
 function DropdownMenuRadioItem({ className, children, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
   return (
-    <DropdownMenuPrimitive.RadioItem className={cn("relative flex cursor-default items-center rounded-md py-2 pr-2 pl-8 text-sm outline-none focus:bg-accent", className)} {...props}>
-      <span className="absolute left-2 flex size-4 items-center justify-center"><DropdownMenuPrimitive.ItemIndicator><Circle className="size-2 fill-current" /></DropdownMenuPrimitive.ItemIndicator></span>
+    <DropdownMenuPrimitive.RadioItem className={cn("relative flex cursor-default items-center rounded-md px-2.5 py-2 text-sm outline-none focus:bg-accent data-[state=checked]:bg-primary/12 data-[state=checked]:font-medium data-[state=checked]:text-primary", className)} {...props}>
       {children}
     </DropdownMenuPrimitive.RadioItem>
   )

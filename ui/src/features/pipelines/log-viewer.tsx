@@ -58,7 +58,7 @@ export function LogViewer({ steps, selectedStep }: { steps: PipelineRunStep[]; s
   return (
     <section className="overflow-hidden rounded-xl border border-zinc-800 bg-[#0d0f11] text-zinc-300 shadow-[0_16px_50px_rgba(0,0,0,.14)]">
       <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-zinc-800 bg-[#121416] px-3 py-2">
-        <div className="flex items-center gap-2 px-1 text-xs font-medium text-zinc-200"><Text className="size-3.5 text-[#58cdb2]" />{selectedStep == null ? "Combined output" : `Step ${selectedStep + 1} output`}</div>
+        <div className="flex items-center gap-2 px-1 text-xs font-medium text-zinc-200"><Text className="size-3.5 text-[var(--terminal-accent)]" />{selectedStep == null ? "Combined output" : `Step ${selectedStep + 1} output`}</div>
         <div className="relative ml-auto w-44 sm:w-56"><Search className="absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-zinc-500" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search logs" className="h-7 border-zinc-700 bg-zinc-900 pl-8 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-600" /></div>
         <Button variant="ghost" size="icon-sm" className={cn("text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200", wrap && "bg-zinc-800 text-zinc-200")} onClick={() => setWrap((value) => !value)} aria-label="Toggle line wrapping">{wrap ? <WrapText /> : <Text />}</Button>
         <Button variant="ghost" size="icon-sm" className="text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200" onClick={copy} aria-label="Copy logs">{copied ? <Check className="text-emerald-400" /> : <Copy />}</Button>
@@ -67,7 +67,7 @@ export function LogViewer({ steps, selectedStep }: { steps: PipelineRunStep[]; s
       <div className="max-h-[60vh] min-h-[420px] overflow-auto p-4 font-mono text-[12px] leading-[1.75]">
         {!groups.length ? <p className="text-zinc-600">No persisted logs are available for this selection.</p> : groups.map(({ step, lines }) => (
           <div className="mb-6 last:mb-0" key={step.step_index}>
-            {selectedStep == null ? <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-[#0d0f11]/95 py-1 text-[10px] font-semibold tracking-[.12em] text-[#58cdb2] uppercase backdrop-blur"><span className="size-1.5 rounded-full bg-current" />Step {step.step_index + 1} · {titleCase(step.step_type)}</div> : null}
+            {selectedStep == null ? <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-[#0d0f11]/95 py-1 text-[10px] font-semibold tracking-[.12em] text-[var(--terminal-accent)] uppercase backdrop-blur"><span className="size-1.5 rounded-full bg-current" />Step {step.step_index + 1} · {titleCase(step.step_type)}</div> : null}
             {lines.map((line, index) => {
               const matches = !normalizedSearch || line.toLowerCase().includes(normalizedSearch)
               return <div key={index} className={cn("flex min-w-max", wrap && "min-w-0", normalizedSearch && matches && "bg-amber-400/8")}><span className="mr-4 w-8 shrink-0 select-none text-right text-zinc-700">{index + 1}</span><code className={cn("block", wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{renderAnsiLine(line)}</code></div>

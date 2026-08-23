@@ -30,6 +30,16 @@ export interface PipelineStepSummary {
   type: "mutate" | "sync" | "exec" | "apply" | string
   trigger_when?: string
   target?: string
+  config: PipelineStepConfig
+}
+
+export interface PipelineStepConfig {
+  trigger_when?: string
+  target?: string
+  files?: Array<string | { src: string; dst: string }>
+  commands?: string[]
+  changes?: Array<{ file: string; update_field: string; value: string }>
+  [field: string]: unknown
 }
 
 export interface PipelineRunSummary {
@@ -69,6 +79,7 @@ export interface TargetSummary {
   host: string
   user: string
   port: number
+  access_secret: string
 }
 
 export interface Webhook {

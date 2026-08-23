@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from "vitest"
 import { StepChain } from "@/components/step-chain"
 
 const steps = [
-  { index: 0, type: "sync", target: "prod-api" },
-  { index: 1, type: "exec", target: "{{TARGET}}" },
+  { index: 0, type: "sync", target: "prod-api", config: { target: "prod-api", files: [] } },
+  { index: 1, type: "exec", target: "{{TARGET}}", config: { target: "{{TARGET}}", commands: [] } },
 ]
 
 describe("StepChain", () => {

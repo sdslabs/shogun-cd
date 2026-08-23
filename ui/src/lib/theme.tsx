@@ -1,15 +1,19 @@
 import * as React from "react"
 
-type Theme = "light" | "dark" | "system"
+export type Theme = "light" | "dark" | "system"
+export type ColorTheme = "karma" | "sukhoi"
 
 interface ThemeContextValue {
   theme: Theme
   setTheme: (theme: Theme) => void
   resolvedTheme: "light" | "dark"
+  colorTheme: ColorTheme
+  setColorTheme: (theme: ColorTheme) => void
 }
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null)
 const THEME_KEY = "shogun.theme"
+const COLOR_THEME_KEY = "shogun.color-theme"
 
 function resolveTheme(theme: Theme) {
   if (theme !== "system") return theme
@@ -22,6 +26,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return stored === "light" || stored === "dark" || stored === "system" ? stored : "system"
   })
   const [resolvedTheme, setResolvedTheme] = React.useState<"light" | "dark">(() => resolveTheme(theme))
+  const [colorTheme, setColorTheme] = React.useState<ColorTheme>(() => {
+    const stored = window.localStorage.getItem(COLOR_THEME_KEY)
+    return stored === "sukhoi" ? "sukhoi" : "karma"
+  })
 
   React.useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)")
@@ -36,13 +44,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => media.removeEventListener("change", update)
   }, [theme])
 
+  React.useEffect(() => {
+    document.documentElement.dataset.colorTheme = colorTheme
+  }, [colorTheme])
+
   const updateTheme = React.useCallback((nextTheme: Theme) => {
     window.localStorage.setItem(THEME_KEY, nextTheme)
     setTheme(nextTheme)
   }, [])
 
+  const updateColorTheme = React.useCallback((nextTheme: ColorTheme) => {
+    window.localStorage.setItem(COLOR_THEME_KEY, nextTheme)
+    document.documentElement.dataset.colorTheme = nextTheme
+    setColorTheme(nextTheme)
+  }, [])
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: updateTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme: updateTheme, resolvedTheme, colorTheme, setColorTheme: updateColorTheme }}>
       {children}
     </ThemeContext.Provider>
   )
