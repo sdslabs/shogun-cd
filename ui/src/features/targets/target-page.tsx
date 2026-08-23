@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, GitBranch, Network, Server, Terminal, UserRound } from "lucide-react"
+import { ArrowLeft, ExternalLink, GitBranch, KeyRound, Network, Server, Terminal, UserRound } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 
 import { ErrorState, PageBody, PageHeader } from "@/components/page"
@@ -26,11 +26,12 @@ export function TargetPage() {
     <div>
       <PageHeader eyebrow="Execution target" title={target.name} description={`${titleCase(target.type)} · ${target.user}@${target.host}:${target.port}`} actions={<Button asChild variant="ghost" size="sm"><Link to="/targets"><ArrowLeft />All targets</Link></Button>} />
       <PageBody className="space-y-8">
-        <section className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Metric icon={Server} label="Type" value={titleCase(target.type)} />
           <Metric icon={Network} label="Host" value={target.host} />
           <Metric icon={UserRound} label="User" value={target.user} />
           <Metric icon={Terminal} label="Port" value={String(target.port)} />
+          <Metric icon={KeyRound} label="Access secret" value={target.access_secret || "—"} />
         </section>
 
         <section>

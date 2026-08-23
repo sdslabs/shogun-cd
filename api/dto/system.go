@@ -8,10 +8,26 @@ type PipelineTrigger struct {
 }
 
 type PipelineStepSummary struct {
-	Index       int    `json:"index"`
-	Type        string `json:"type"`
-	TriggerWhen string `json:"trigger_when,omitempty"`
-	Target      string `json:"target,omitempty"`
+	Index       int            `json:"index"`
+	Type        string         `json:"type"`
+	TriggerWhen string         `json:"trigger_when,omitempty"`
+	Target      string         `json:"target,omitempty"`
+	Config      map[string]any `json:"config"`
+}
+
+// PipelineSyncStepDTO is needed because sync files are structured src/dst
+// objects, unlike apply files and exec commands which are plain string lists.
+type PipelineSyncStepDTO struct {
+	Src string `json:"src"`
+	Dst string `json:"dst"`
+}
+
+// PipelineMutateStepDTO is needed because each mutate change contains three
+// named fields, so it requires a stable JSON object for the frontend.
+type PipelineMutateStepDTO struct {
+	File        string `json:"file"`
+	UpdateField string `json:"update_field"`
+	Value       string `json:"value"`
 }
 
 type PipelineSummary struct {
@@ -34,9 +50,10 @@ type PipelineRunSummary struct {
 }
 
 type TargetSummary struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	Host string `json:"host"`
-	User string `json:"user"`
-	Port int    `json:"port"`
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	Host         string `json:"host"`
+	User         string `json:"user"`
+	Port         int    `json:"port"`
+	AccessSecret string `json:"access_secret"`
 }

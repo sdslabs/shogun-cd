@@ -77,8 +77,108 @@ func TestListAllPipelinesIncludesLatestRunSummary(t *testing.T) {
 	}
 }
 
+func TestListAllTargetsIncludesAccessSecretReference(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	targetResource := &target.Target{
+		Metadata: target.Metadata{Name: "production", Type: target.ServerType},
+		Spec: target.Spec{
+			Host:         "deploy.example.com",
+			User:         "shogun",
+			Port:         22,
+			AccessSecret: "PRODUCTION_SSH_KEY",
+		},
+	}
+	handler := &Handler{
+		response: response.NewResponder(false),
+		orch:     &systemTestOrchestrator{targets: []*target.Target{targetResource}},
+	}
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/system/targets", nil)
+	handler.ListAllTargets(ctx)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+
+	var payload struct {
+		Data []struct {
+			Name         string `json:"name"`
+			AccessSecret string `json:"access_secret"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(payload.Data) != 1 || payload.Data[0].Name != "production" || payload.Data[0].AccessSecret != "PRODUCTION_SSH_KEY" {
+		t.Fatalf("unexpected target response: %+v", payload.Data)
+	}
+}
+
+func TestPipelineStepDefinitionIncludesAllManifestFields(t *testing.T) {
+	tests := []struct {
+		name string
+		step pipelineSteps.Step
+		want string
+	}{
+		{
+			name: "mutate",
+			step: &pipelineSteps.MutateStep{
+				TriggerWhen: string(pipeline.WebhookTriggerKind),
+				Changes: []pipelineSteps.Change{{
+					File:        "services/api/compose.yaml",
+					UpdateField: "services.api.image",
+					Value:       "{{IMAGE}}",
+				}},
+			},
+			want: `{"changes":[{"file":"services/api/compose.yaml","update_field":"services.api.image","value":"{{IMAGE}}"}],"trigger_when":"ci_webhook"}`,
+		},
+		{
+			name: "sync",
+			step: &pipelineSteps.SyncStep{
+				TriggerWhen: string(pipeline.GitChangesTriggerKind),
+				Target:      "production",
+				Files:       []pipelineSteps.FileUpdate{{Src: "compose.yaml", Dst: "~/compose.yaml"}},
+			},
+			want: `{"files":[{"src":"compose.yaml","dst":"~/compose.yaml"}],"target":"production","trigger_when":"git_changes"}`,
+		},
+		{
+			name: "exec",
+			step: &pipelineSteps.ExecStep{
+				TriggerWhen: string(pipeline.WebhookTriggerKind),
+				Target:      "production",
+				Commands:    []string{"docker compose pull", "docker compose up -d"},
+			},
+			want: `{"commands":["docker compose pull","docker compose up -d"],"target":"production","trigger_when":"ci_webhook"}`,
+		},
+		{
+			name: "apply",
+			step: &pipelineSteps.ApplyStep{
+				TriggerWhen: string(pipeline.GitChangesTriggerKind),
+				Target:      "cluster",
+				Files:       []string{"deployment.yaml", "service.yaml"},
+			},
+			want: `{"files":["deployment.yaml","service.yaml"],"target":"cluster","trigger_when":"git_changes"}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			encoded, err := json.Marshal(pipelineStepDefinition(test.step))
+			if err != nil {
+				t.Fatalf("encode definition: %v", err)
+			}
+			if string(encoded) != test.want {
+				t.Fatalf("unexpected definition:\nwant: %s\n got: %s", test.want, encoded)
+			}
+		})
+	}
+}
+
 type systemTestOrchestrator struct {
 	pipelines []*pipeline.Pipeline
+	targets   []*target.Target
 }
 
 var _ orchestrator.Orchestrator = (*systemTestOrchestrator)(nil)
@@ -91,7 +191,7 @@ func (*systemTestOrchestrator) RunPipeline(context.Context, string, pipeline.Tri
 }
 func (*systemTestOrchestrator) PipelineExists(string) bool            { return true }
 func (o *systemTestOrchestrator) ListPipelines() []*pipeline.Pipeline { return o.pipelines }
-func (*systemTestOrchestrator) ListTargets() []*target.Target         { return nil }
+func (o *systemTestOrchestrator) ListTargets() []*target.Target       { return o.targets }
 
 type systemTestPipelineStore struct {
 	latest map[string]*models.PipelineRun
