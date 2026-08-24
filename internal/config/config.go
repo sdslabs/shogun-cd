@@ -13,15 +13,16 @@ func LoadConfigs(l utils.Logger) (*Config, error) {
 	l.Log("Loading Configs from %v...", configFilePath)
 	var cfg Config
 
-	f, err := os.Open(configFilePath)
+	raw, err := os.ReadFile(configFilePath)
 	if err != nil {
 		l.LogNewError("Failed to open config file:", err)
 		return nil, err
 	}
-	defer f.Close()
 
-	decoder := yaml.NewDecoder(f)
-	if err := decoder.Decode(&cfg); err != nil {
+	// Expand ${VAR}/$VAR references so container envs (e.g. from docker-compose) can fill in the config.
+	expanded := os.ExpandEnv(string(raw))
+
+	if err := yaml.Unmarshal([]byte(expanded), &cfg); err != nil {
 		l.LogNewError("Failed to decode config file:", err)
 		return nil, err
 	}

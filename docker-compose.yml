@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:18.3-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-shogun}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pwd}
+      POSTGRES_DB: ${DB_NAME:-shogun_db}
+    volumes:
+      # Postgres 18+ images want the mount on the parent dir, not .../data.
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-shogun}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Not needed when SHOGUN points DB_HOST at an external Postgres (e.g. RDS) -
+    # drop this service and set DB_HOST/DB_PORT in .env instead.
+
+  shogun:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${SHOGUN_PORT:-7007}:${SHOGUN_PORT:-7007}"
+    volumes:
+      - ./docker/config.template.yaml:/app/config.yaml:ro
+      - shogun_data:/var/lib/shogun
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+
+  # Behind a profile since it pulls a separately published UI image, not one built
+  # from this repo: `docker compose --profile ui up`.
+  ui:
+    image: ${SHOGUN_UI_IMAGE:-ghcr.io/sdslabs/shogun-ui:latest}
+    restart: unless-stopped
+    environment:
+      SHOGUN_API_URL: http://shogun:${SHOGUN_PORT:-7007}
+    ports:
+      - "${SHOGUN_UI_PORT:-8080}:8080"
+    depends_on:
+      - shogun
+    profiles: ["ui"]
+
+volumes:
+  db_data:
+  shogun_data:

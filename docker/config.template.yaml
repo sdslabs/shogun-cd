@@ -1,0 +1,25 @@
+debug: ${SHOGUN_DEBUG}
+data_dir: "/var/lib/shogun/"
+git:
+    create_deploy_key: ${GIT_CREATE_DEPLOY_KEY}
+    repo: "${GIT_REPO}"
+    branch: "${GIT_BRANCH}"
+    polling_interval: ${GIT_POLLING_INTERVAL}
+api:
+    admin:
+        email: "${ADMIN_EMAIL}"
+        password: "${ADMIN_PASSWORD}"
+    port: ${SHOGUN_PORT}
+    jwt:
+        secret: "${JWT_SECRET}"
+        expiration_hours: ${JWT_EXPIRATION_HOURS}
+    enable_api_spec: ${ENABLE_API_SPEC}
+database:
+    host: "${DB_HOST}"
+    port: ${DB_PORT}
+    user: "${DB_USER}"
+    password: "${DB_PASSWORD}"
+    dbname: "${DB_NAME}"
+    ssl_mode: "${DB_SSL_MODE}"
+    master_key: "${DB_MASTER_KEY}"
+    encryption_salt: "${DB_ENCRYPTION_SALT}"
