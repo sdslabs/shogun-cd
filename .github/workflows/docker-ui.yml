@@ -1,0 +1,57 @@
+name: Docker UI
+
+# Builds and publishes the UI's Docker image whenever ui/ changes on the
+# default branches. This intentionally never fires until a ui/ directory
+# (with its own Dockerfile) lands on the branch, so it's safe to merge ahead
+# of that work landing.
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "ui/**"
+  workflow_dispatch: {}
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/shogun-ui
+
+jobs:
+  docker:
+    name: Build and push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # hashFiles() can't be used in a job-level `if:` (no checkout has
+      # happened yet at that point), so gate each later step on this step's
+      # output instead. This keeps the workflow a no-op until ui/Dockerfile
+      # actually exists.
+      - id: dockerfile
+        run: echo "present=$([ -f ui/Dockerfile ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.dockerfile.outputs.present == 'true'
+
+      - uses: docker/login-action@v3
+        if: steps.dockerfile.outputs.present == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        if: steps.dockerfile.outputs.present == 'true'
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
+      - uses: docker/build-push-action@v6
+        if: steps.dockerfile.outputs.present == 'true'
+        with:
+          context: ./ui
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
