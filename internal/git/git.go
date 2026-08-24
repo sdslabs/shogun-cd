@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...string) ([]byte, error) {
@@ -15,15 +14,7 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 
 	// Only set working directory for non-clone commands
 	// git clone creates the directory, so we can't cd into it first
-	isClone := false
-	for _, a := range args {
-		if strings.HasPrefix(a, "-") {
-			continue
-		}
-		isClone = a == "clone"
-		break
-	}
-	if !isClone {
+	if len(args) > 0 && args[2] != "clone" {
 		cmd.Dir = r.CloneDir
 	}
 
