@@ -16,12 +16,17 @@ func (r *Repo) ExecGitCommand(ctx context.Context, gitPath string, args ...strin
 		cmd.Dir = r.CloneDir
 	}
 
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_TEMPLATE_DIR=/dev/null",
+	)
 	if r.DeployKeys != nil {
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(cmd.Env,
 			"GIT_SSH_COMMAND=ssh -i "+r.DeployKeys.PrivatePath+" -o IdentitiesOnly=yes -F /dev/null -o StrictHostKeyChecking=no",
 		)
 	} else {
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(cmd.Env,
 			"GIT_SSH_COMMAND=ssh -o IdentitiesOnly=yes -o IdentityFile=/dev/null -F /dev/null -o StrictHostKeyChecking=no",
 		)
 	}

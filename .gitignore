@@ -7,3 +7,4 @@ ssh/
 .ssh/
 tmp/
 .DS_Store
+.commandcode/
