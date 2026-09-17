@@ -1,35 +1,34 @@
 package orchestrator
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 )
 
 // RunPipeline executes a pipeline with the given name, trigger kind, and variables
-// It returns an error if the pipeline is not found
-func (o *orchestrator) RunPipeline(pipelineName string, triggerKind pipeline.TriggerKind, variables map[string]string) error {
+// It returns the persisted run ID, or an error if the run could not be started.
+func (o *orchestrator) RunPipeline(ctx context.Context, pipelineName string, triggerKind pipeline.TriggerKind, variables map[string]string) (uint, error) {
 
-	// Fast fail
-	if !o.PipelineExists(pipelineName) {
+	pipelines := o.Pipelines.Load()
+	pipelineInstance, exists := (*pipelines)[pipelineName]
+	if !exists {
 		o.logger.Log("Pipeline not found: " + pipelineName)
-		return fmt.Errorf("pipeline not found: %s", pipelineName)
+		return 0, fmt.Errorf("pipeline not found: %s", pipelineName)
 	}
 
-	// If fast fail passes then pipline is queued for execution
-	// There is a possibility of TOCTTOU race condition but it is acceptable by the use of 2nd check below
-	go func() {
-		pipelines := o.Pipelines.Load()
-		pipeline, exists := (*pipelines)[pipelineName]
-		if !exists {
-			o.logger.LogNewError("Pipeline %s removed before execution could start", pipelineName)
-			return
-		}
+	runID, err := o.pipelineService.CreatePipelineRun(ctx, pipelineName, triggerKind)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create pipeline run: %w", err)
+	}
 
+	go func() {
 		o.mu.RLock()
+		defer o.mu.RUnlock()
+
 		targets := o.Targets.Load()
-		success := o.pipelineService.ExecutePipeline(pipeline, triggerKind, *targets, variables)
-		o.mu.RUnlock()
+		success := o.pipelineService.ExecutePipeline(runID, pipelineInstance, triggerKind, *targets, variables)
 
 		if !success {
 			o.logger.Log("Pipeline execution failed: " + pipelineName)
@@ -38,7 +37,7 @@ func (o *orchestrator) RunPipeline(pipelineName string, triggerKind pipeline.Tri
 		}
 	}()
 
-	return nil
+	return runID, nil
 }
 
 // LockPipelines locks the orchestrator's pipeline mutex for indexer and pull operations

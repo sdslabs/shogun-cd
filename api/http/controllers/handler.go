@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
+	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
 	"github.com/kunalvirwal/shogun-cd/internal/users"
@@ -18,9 +19,10 @@ type Handler struct {
 	user     users.Service
 	secret   secrets.SecretService
 	store    *store.Store
+	orch     orchestrator.Orchestrator
 }
 
-func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store) *Handler {
+func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) *Handler {
 	return &Handler{
 		logger:   l,
 		config:   cfg,
@@ -29,5 +31,6 @@ func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder
 		user:     u,
 		secret:   secrets,
 		store:    store,
+		orch:     orch,
 	}
 }
