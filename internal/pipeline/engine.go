@@ -11,7 +11,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 )
 
-func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger TriggerKind, targets map[string]*target.Target, hookValues map[string]string) (success bool) {
+func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger TriggerKind, targets map[string]*target.Target, triggerValues map[string]string) (success bool) {
 	ctx := context.Background()
 	defer func() {
 		if err := p.finishPipelineRun(ctx, runID, success); err != nil {
@@ -19,25 +19,17 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 		}
 	}()
 
-	// [TODO] Move this check outside to caller
+	// Keep a defensive enabled check even though the orchestrator validates before creating a run.
 	if !pipeline.Metadata.Enabled {
 		p.logger.LogInfo("Pipeline %s is disabled; skipping execution", pipeline.Metadata.Name)
 		return false
 	}
 
-	if hookValues == nil {
-		hookValues = make(map[string]string)
+	if triggerValues == nil {
+		triggerValues = make(map[string]string)
 	}
 
-	found := false
-	for _, t := range pipeline.Spec.Triggers {
-		if t.Type == string(trigger) {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !pipeline.SupportsTrigger(trigger) {
 		p.logger.LogNewError("Pipeline %s does not have trigger of type %s; cannot execute", pipeline.Metadata.Name, string(trigger))
 		return false
 	}
@@ -48,7 +40,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 		GitService:    p.gitService,
 		SecretService: p.secretService,
 		Targets:       targets,
-		HookValues:    hookValues,
+		TriggerValues: triggerValues,
 		SSHManager:    sshclient.NewSSHManager(),
 	}
 
@@ -62,9 +54,8 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 
 		step := sw.Step
 
-		// If trigger is specified for the step, and the step's trigger doesn't match the pipeline trigger, skip the step
-		if step.Trigger() != "" && step.Trigger() != string(trigger) {
-			output = p.logger.LogShogunInfo(output, "Skipping step %d as its trigger '%s' does not match pipeline trigger '%s'", i+1, step.Trigger(), string(trigger))
+		if !pipelineSteps.ShouldRunForTrigger(step, string(trigger)) {
+			output = p.logger.LogShogunInfo(output, "Skipping step %d because its trigger_when list does not include pipeline trigger '%s'", i+1, string(trigger))
 			continue
 		}
 

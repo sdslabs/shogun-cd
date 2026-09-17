@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowLeft, Boxes, Braces, ChevronRight, FilePenLine, Files, GitBranch, RefreshCw, Terminal, Timer } from "lucide-react"
+import { ArrowLeft, Boxes, Braces, ChevronRight, FilePenLine, Files, GitBranch, Pause, Play, RefreshCw, Terminal, Timer } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { EmptyState, ErrorState, PageBody, PageHeader } from "@/components/page"
@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { usePipeline, usePipelineRuns } from "@/features/pipelines/hooks"
 import { PipelineDefinition } from "@/features/pipelines/pipeline-definition"
+import { RunPipelineDialog } from "@/features/pipelines/run-pipeline-dialog"
+import { useAuth } from "@/features/auth/auth-provider"
 import { formatDateTime, formatDuration, formatRelativeTime } from "@/lib/format"
 import type { PipelineRun, PipelineStepSummary } from "@/lib/api/types"
 import { cn, pluralize, titleCase } from "@/lib/utils"
@@ -20,13 +22,17 @@ export function PipelinePage() {
   const navigate = useNavigate()
   const pipelineQuery = usePipeline(pipelineName)
   const runsQuery = usePipelineRuns(pipelineName)
+  const { claims } = useAuth()
   const pipeline = pipelineQuery.pipeline
   const [configurationOpen, setConfigurationOpen] = useState(false)
   const [selectedDefinitionStep, setSelectedDefinitionStep] = useState(0)
+  const [runDialogOpen, setRunDialogOpen] = useState(false)
 
   if (pipelineQuery.isLoading) return <PipelinePageSkeleton />
   if (pipelineQuery.isError) return <ErrorState error={pipelineQuery.error} retry={() => pipelineQuery.refetch()} />
   if (!pipeline) return <ErrorState title="Pipeline not found" error={new Error(`“${pipelineName}” is not present in the current Git index.`)} />
+
+  const canRunFromUI = claims?.role === "admin" && pipeline.triggers.some((trigger) => trigger.type === "ui_trigger")
 
   return (
     <div>
@@ -34,7 +40,13 @@ export function PipelinePage() {
         eyebrow="Pipeline"
         title={pipeline.name}
         description={`${pipeline.enabled ? "Enabled" : "Disabled"} · ${pluralize(pipeline.steps.length, "step")} · ${pluralize(pipeline.triggers.length, "trigger")}`}
-        actions={<><Button asChild variant="ghost" size="sm"><Link to="/pipelines"><ArrowLeft />All pipelines</Link></Button><Button variant="outline" size="sm" onClick={() => runsQuery.refetch()} disabled={runsQuery.isFetching}><RefreshCw className={runsQuery.isFetching ? "animate-spin" : ""} />Refresh runs</Button></>}
+        actions={
+          <>
+            <Button asChild variant="ghost" size="sm"><Link to="/pipelines"><ArrowLeft />All pipelines</Link></Button>
+            <Button variant="outline" size="sm" onClick={() => runsQuery.refetch()} disabled={runsQuery.isFetching}><RefreshCw className={runsQuery.isFetching ? "animate-spin" : ""} />Refresh runs</Button>
+            {canRunFromUI ? <Button size="sm" onClick={() => setRunDialogOpen(true)} disabled={!pipeline.enabled} title={pipeline.enabled ? undefined : "This pipeline is disabled"}>{pipeline.enabled ? <Play /> : <Pause />}Run pipeline</Button> : null}
+          </>
+        }
       />
       <PageBody className="space-y-7">
         <section className="overflow-hidden rounded-xl border bg-card">
@@ -82,6 +94,7 @@ export function PipelinePage() {
             selectedStep={selectedDefinitionStep}
             onOpenChange={setConfigurationOpen}
           />
+          {canRunFromUI ? <RunPipelineDialog pipelineName={pipeline.name} open={runDialogOpen} onOpenChange={setRunDialogOpen} onStarted={(runID) => navigate(`/pipelines/${encodeURIComponent(pipeline.name)}/runs/${runID}`)} /> : null}
         </section>
 
         <section>

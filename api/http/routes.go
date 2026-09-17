@@ -45,6 +45,11 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 			secret.POST("", h.SetSecrets)
 			secret.DELETE("/:secret", h.DeleteSecret)
 		}
+
+		pipeline := admin.Group("/pipeline/:pipeline")
+		{
+			pipeline.POST("/run", h.StartPipelineRun)
+		}
 	}
 
 	system := router.Group("/system")

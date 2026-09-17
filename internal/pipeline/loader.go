@@ -44,23 +44,31 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 		p.logger.LogNewError("metadata.name cannot be empty")
 		return false
 	}
-	if len(pipeline.Spec.Triggers) == 0 || len(pipeline.Spec.Triggers) > 2 {
-		p.logger.LogNewError("pipeline must have 1 or 2 triggers defined")
+	if len(pipeline.Spec.Triggers) == 0 {
+		p.logger.LogNewError("pipeline must have at least one trigger defined")
 		return false
 	}
+	seenPipelineTriggers := make(map[string]struct{}, len(pipeline.Spec.Triggers))
 	for _, trigger := range pipeline.Spec.Triggers {
-		if trigger.Type == string(WebhookTriggerKind) {
-			continue
+		if !IsValidTriggerKind(trigger.Type) {
+			p.logger.LogNewError("invalid trigger type: %s", trigger.Type)
+			return false
 		}
+		if _, exists := seenPipelineTriggers[trigger.Type]; exists {
+			p.logger.LogNewError("duplicate trigger type: %s", trigger.Type)
+			return false
+		}
+		seenPipelineTriggers[trigger.Type] = struct{}{}
+
 		if trigger.Type == string(GitChangesTriggerKind) {
 			if len(trigger.Paths) == 0 {
 				p.logger.LogNewError("git_changes trigger must specify atleast one path")
 				return false
 			}
-			continue
+		} else if len(trigger.Paths) != 0 {
+			p.logger.LogNewError("%s trigger cannot specify paths", trigger.Type)
+			return false
 		}
-		p.logger.LogNewError("invalid trigger type")
-		return false
 	}
 
 	for i, sw := range pipeline.Spec.Steps {
@@ -72,7 +80,7 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 		switch sw.Step.Type() {
 		case pipelineSteps.MutateType:
 			step := sw.Step.(*pipelineSteps.MutateStep)
-			if !p.validTrigger(step.TriggerWhen, i) {
+			if !p.validTriggers(pipeline, step.TriggerWhen, i) {
 				return false
 			}
 			for _, change := range step.Changes {
@@ -92,7 +100,7 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 
 		case pipelineSteps.SyncType:
 			step := sw.Step.(*pipelineSteps.SyncStep)
-			if !p.validTrigger(step.TriggerWhen, i) {
+			if !p.validTriggers(pipeline, step.TriggerWhen, i) {
 				return false
 			}
 			if step.Target == "" {
@@ -102,7 +110,7 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 
 		case pipelineSteps.ExecType:
 			step := sw.Step.(*pipelineSteps.ExecStep)
-			if !p.validTrigger(step.TriggerWhen, i) {
+			if !p.validTriggers(pipeline, step.TriggerWhen, i) {
 				return false
 			}
 			if step.Target == "" {
@@ -116,7 +124,7 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 
 		case pipelineSteps.ApplyType:
 			step := sw.Step.(*pipelineSteps.ApplyStep)
-			if !p.validTrigger(step.TriggerWhen, i) {
+			if !p.validTriggers(pipeline, step.TriggerWhen, i) {
 				return false
 			}
 			if step.Target == "" {
@@ -143,10 +151,23 @@ func (p *Service) validatePipeline(pipeline *Pipeline) bool {
 	return true
 }
 
-func (p *Service) validTrigger(trigger string, i int) bool {
-	if trigger == "" || trigger == string(WebhookTriggerKind) || trigger == string(GitChangesTriggerKind) {
-		return true
+func (p *Service) validTriggers(pipeline *Pipeline, triggers []string, i int) bool {
+	seenTriggers := make(map[string]struct{}, len(triggers))
+	for _, trigger := range triggers {
+		if !IsValidTriggerKind(trigger) {
+			p.logger.LogNewError("step %d has invalid trigger_when value: %s", i+1, trigger)
+			return false
+		}
+		if _, exists := seenTriggers[trigger]; exists {
+			p.logger.LogNewError("step %d has duplicate trigger_when value: %s", i+1, trigger)
+			return false
+		}
+		if !pipeline.SupportsTrigger(TriggerKind(trigger)) {
+			p.logger.LogNewError("step %d references trigger %s which is not declared by the pipeline", i+1, trigger)
+			return false
+		}
+		seenTriggers[trigger] = struct{}{}
 	}
-	p.logger.LogNewError("step %d has invalid trigger_when: %s", i+1, trigger)
-	return false
+
+	return true
 }

@@ -21,20 +21,20 @@ export type PipelineRunStatus = "queued" | "running" | "succeeded" | "failed" | 
 export type StepStatus = "in_progress" | "succeeded" | "failed" | "skipped"
 
 export interface PipelineTrigger {
-  type: "ci_webhook" | "git_changes" | string
+  type: "ci_webhook" | "git_changes" | "ui_trigger" | string
   paths?: string[]
 }
 
 export interface PipelineStepSummary {
   index: number
   type: "mutate" | "sync" | "exec" | "apply" | string
-  trigger_when?: string
+  trigger_when?: string[]
   target?: string
   config: PipelineStepConfig
 }
 
 export interface PipelineStepConfig {
-  trigger_when?: string
+  trigger_when?: string[]
   target?: string
   files?: Array<string | { src: string; dst: string }>
   commands?: string[]
@@ -71,6 +71,14 @@ export interface PipelineRunStep {
 export interface PipelineRun extends PipelineRunSummary {
   pipeline: string
   steps: PipelineRunStep[]
+}
+
+export interface StartPipelineRunInput {
+  values: Record<string, string>
+}
+
+export interface StartPipelineRunData {
+  run_id: number
 }
 
 export interface TargetSummary {

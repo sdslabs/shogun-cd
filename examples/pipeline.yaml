@@ -7,13 +7,16 @@ metadata:
 spec:
     triggers:
         - type: "ci_webhook"
+        - type: "ui_trigger"
         - type: "git_changes"
           paths: ["services/api/**"]
 
     steps:
         # mutates the field and make a commit
         - mutate:
-              trigger_when: ci_webhook # or git_changes
+              trigger_when:  # if not mentioned then all triggers will be considered
+                  - ci_webhook
+                  - ui_trigger
               changes:
                 - file: services/api/compose.yml
                   update_field: services.api.image
