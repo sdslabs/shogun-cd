@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -9,6 +10,12 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/pipeline"
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
+)
+
+var (
+	ErrPipelineNotFound     = errors.New("pipeline not found")
+	ErrPipelineDisabled     = errors.New("pipeline is disabled")
+	ErrTriggerNotConfigured = errors.New("pipeline does not declare this trigger")
 )
 
 type Orchestrator interface {
@@ -19,7 +26,7 @@ type Orchestrator interface {
 	// Run repo Poller go routine
 	StartPoller(ctx context.Context)
 	// Executes a pipeline with the given name, trigger kind, and variables
-	RunPipeline(ctx context.Context, pipelineName string, triggerKind pipeline.TriggerKind, variables map[string]string) (uint, error)
+	RunPipeline(ctx context.Context, pipelineName string, triggerKind pipeline.TriggerKind, triggerValues map[string]string) (uint, error)
 	// Checks if a pipeline with a given name exists
 	PipelineExists(pipelineName string) bool
 	// Returns snapshots of the currently indexed pipeline and target resources.
