@@ -24,11 +24,11 @@ LOG_FILE="/var/log/shogun.log"
 
 # ── helpers ──────────────────────────────────
 
-print_status()  { printf "${BLUE}→${NC} %s\n" "$1"; }
-print_success() { printf "${GREEN}✓${NC} %s\n" "$1"; }
-print_warn()    { printf "${YELLOW}⚠${NC} %s\n" "$1"; }
-print_error()   { printf "${RED}✗${NC} %s\n" "$1"; }
-print_bold()    { printf "${BOLD}%s${NC}\n" "$1"; }
+print_status()  { printf "${BLUE}→${NC} %b\n" "$1"; }
+print_success() { printf "${GREEN}✓${NC} %b\n" "$1"; }
+print_warn()    { printf "${YELLOW}⚠${NC} %b\n" "$1"; }
+print_error()   { printf "${RED}✗${NC} %b\n" "$1"; }
+print_bold()    { printf "${BOLD}%b${NC}\n" "$1"; }
 
 die() {
     print_error "$1"
@@ -41,6 +41,10 @@ need_sudo() {
         printf "Enter your password to continue: "
         sudo -v || die "sudo authentication failed"
     fi
+}
+
+revoke_sudo() {
+    sudo -k 2>/dev/null || true
 }
 
 random_hex() {
@@ -56,6 +60,59 @@ random_hex() {
         echo "$hex"
     }
 }
+
+run_cmd() {
+    cmd_msg="$1"
+    shift
+    
+    if ! err_out=$("$@" 2>&1); then
+        printf "\n"
+        if [ -n "$err_out" ]; then
+            printf "${RED}%s${NC}\n" "$err_out"
+            printf "\n"
+        fi
+
+        die "$cmd_msg"
+    fi
+}
+
+get_config_val() {
+    key="$1"
+    if sudo test -f "$CONFIG_FILE"; then
+        sudo grep -E "^[[:space:]]*${key}:" "$CONFIG_FILE" 2>/dev/null | head -n1 | sed -E "s/^[[:space:]]*${key}:[[:space:]]*[\"']?([^\"']*)[\"']?/\1/" | tr -d '\r\n '
+    fi
+}
+
+# ── signal & exit handler ────────────────────
+
+cleanup() {
+    exit_code=$?
+
+    # Prevent double execution if EXIT fires after INT/TERM
+    if [ "${CLEANED_UP:-0}" -eq 1 ]; then
+        exit "$exit_code"
+    fi
+    CLEANED_UP=1
+
+    revoke_sudo
+    
+    if [ -n "${TMP_DIR:-}" ] && [ -d "$TMP_DIR" ]; then
+        rm -rf "$TMP_DIR"
+    fi
+
+    # Only show warning if script failed naturally (exit code != 0 and NOT manually interrupted with Ctrl+C)
+    if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 130 ]; then
+        printf "\n"
+        print_warn "Installation interrupted or failed."
+    elif [ "$exit_code" -eq 130 ]; then
+        printf "\n"
+        print_warn "Installation cancelled by user."
+    fi
+
+    exit "$exit_code"
+}
+
+trap cleanup EXIT INT TERM
 
 # ── banner ───────────────────────────────────
 
@@ -83,6 +140,8 @@ case "$ARCH" in
     aarch64|arm64) ARCH="arm64" ;;
     *) die "Unsupported architecture: $ARCH" ;;
 esac
+
+[ "$OS" = "darwin" ] && DB_VOLUME="shogun_db_data"
 
 print_success "Detected: $OS / $ARCH"
 
@@ -149,7 +208,9 @@ print_status "Creating directories..."
 
 sudo mkdir -p "$CONFIG_DIR"
 sudo mkdir -p "$DATA_DIR"
-sudo mkdir -p "$DB_VOLUME"
+case "$DB_VOLUME" in
+    /*) sudo mkdir -p "$DB_VOLUME" ;;
+esac
 # shogun runs unprivileged (see step 11) and writes its deploy key under
 # $DATA_DIR/ssh/, so hand ownership to the invoking user.
 sudo chown -R "$(id -u):$(id -g)" "$DATA_DIR"
@@ -201,6 +262,12 @@ else
     fi
 
     print_success "Docker found"
+    
+    if ! docker info >/dev/null 2>&1; then
+        die "Docker is installed, but the Docker daemon/socket is not running. Start Docker and re-run the script."
+    fi
+
+    print_success "Docker daemon is running"
 
     printf "\nUse an auto-generated database password or provide your own?\n"
     printf "  [a] Auto-generate (recommended)\n"
@@ -210,7 +277,7 @@ else
     PWD_CHOICE=$(echo "$PWD_CHOICE" | tr '[:upper:]' '[:lower:]')
 
     DB_HOST="127.0.0.1"
-    DB_PORT="5432"
+    DB_PORT="5434"
     DB_USER="shogun"
     DB_NAME="shogun_db"
     DB_SSL="disable"
@@ -227,32 +294,56 @@ else
         print_status "Auto-generated DB password: ${BOLD}$DB_PASSWORD${NC}"
     fi
 
-    print_status "Starting PostgreSQL container..."
-
     # Stop existing container if present
-    docker stop shogun_db 2>/dev/null || true
+    docker stop shogun_db >/dev/null 2>&1 || true
+    
+    print_status "Pulling PostgreSQL Docker image"
+    run_cmd "Failed to pull postgres Docker image." \
+        docker pull postgres:18.3-alpine3.23
 
-    docker pull postgres:18.3-alpine3.23 >/dev/null 2>&1
-
-    docker run --name shogun_db --rm \
-        -v "$DB_VOLUME:/var/lib/postgresql/" \
-        -p "$DB_PORT:5432" \
-        -e "POSTGRES_USER=$DB_USER" \
-        -e "POSTGRES_PASSWORD=$DB_PASSWORD" \
-        -e "POSTGRES_DB=$DB_NAME" \
-        -d postgres:18.3-alpine3.23 >/dev/null 2>&1
-
+    print_status "Starting PostgreSQL container..."
+    run_cmd "Failed to start PostgreSQL container." \
+      docker run --name shogun_db --rm \
+          -v "$DB_VOLUME:/var/lib/postgresql/data" \
+          -e "PGDATA=/var/lib/postgresql/data/pgdata" \
+          -p "$DB_PORT:5432" \
+          -e "POSTGRES_USER=$DB_USER" \
+          -e "POSTGRES_PASSWORD=$DB_PASSWORD" \
+          -e "POSTGRES_DB=$DB_NAME" \
+          -d postgres:18.3-alpine3.23 
+    
     print_success "PostgreSQL container started (port $DB_PORT)"
 
     # Wait for DB to be ready
     print_status "Waiting for database to be ready..."
+    DB_READY=0
     for _ in $(seq 1 30); do
-        if docker exec shogun_db pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+        if docker exec shogun_db pg_isready >/dev/null 2>&1; then
+            DB_READY=1
             break
         fi
         sleep 1
     done
-    print_success "Database is ready"
+
+    if [ "$DB_READY" -eq 1 ]; then
+        print_success "Database is ready"
+        print_status "Syncing database credentials..."
+    
+        docker exec shogun_db psql -U "$DB_USER" -d "$DB_NAME" -c "
+        DO \$\$
+        BEGIN
+            IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$DB_USER') THEN
+                ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
+            ELSE
+                CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD' SUPERUSER;
+            END IF;
+        END
+        \$\$;" >/dev/null 2>&1 || die "Failed to sync database user credentials."
+
+        print_success "Database credentials synced"
+    else
+        die "Database container started, but PostgreSQL container took too long to become ready."
+    fi
 fi
 
 # ── step 7: git repo ────────────────────────
@@ -260,7 +351,7 @@ fi
 printf "\n${BOLD}Git Repository${NC}\n"
 printf "Shogun-CD watches a Git repository for Pipeline and Target manifests.\n\n"
 
-printf "  Git repo URL (SSH recommended, e.g. git@github.com:user/repo.git): "
+printf "  Git repo URL (SSH mandatory, e.g. git@github.com:user/repo.git): "
 read -r GIT_REPO
 [ -n "$GIT_REPO" ] || die "Git repository URL is required"
 
@@ -286,8 +377,15 @@ printf "\n"
 
 # ── step 9: generate secrets ────────────────
 
-MASTER_KEY=$(random_hex 16)
-ENCRYPTION_SALT=$(random_hex 8)
+if [ -f "$CONFIG_FILE" ]; then
+    print_status "Existing config found. Reusing existing master key, encryption salt, and JWT secret..."
+    MASTER_KEY=$(get_config_val "master_key")
+    ENCRYPTION_SALT=$(get_config_val "encryption_salt")
+fi
+
+MASTER_KEY=${MASTER_KEY:-$(random_hex 16)}
+ENCRYPTION_SALT=${ENCRYPTION_SALT:-$(random_hex 8)}
+
 JWT_SECRET=$(random_hex 16)
 
 # ── step 10: write config ───────────────────
@@ -325,6 +423,9 @@ database:
     master_key: "$MASTER_KEY"
     encryption_salt: "$ENCRYPTION_SALT"
 YAML_EOF
+
+sudo chmod 600 "$CONFIG_FILE"
+sudo chown "$(id -u):$(id -g)" "$CONFIG_FILE"
 
 print_success "Configuration written"
 
@@ -367,8 +468,8 @@ printf "${NC}\n"
 printf "  ${BOLD}API:${NC}      http://localhost:7007\n"
 printf "  ${BOLD}Docs:${NC}     http://localhost:7007/docs/\n"
 printf "  ${BOLD}Config:${NC}   $CONFIG_FILE\n"
-printf "  ${BOLD}Logs:${NC}    $LOG_FILE\n"
-printf "  ${BOLD}Data:${NC}    $DATA_DIR/\n"
+printf "  ${BOLD}Logs:${NC}     $LOG_FILE\n"
+printf "  ${BOLD}Data:${NC}     $DATA_DIR/\n"
 printf "\n"
 printf "  ${BOLD}Database credentials:${NC}\n"
 printf "    Host:     $DB_HOST\n"

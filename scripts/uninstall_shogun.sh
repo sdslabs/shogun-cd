@@ -13,6 +13,23 @@ DATA_DIR="/var/lib/shogun"
 LOG_FILE="/var/log/shogun.log"
 DB_CONTAINER="shogun_db"
 
+# ── helpers ──────────────────────────────────
+
+need_sudo() {
+    if [ "$(id -u)" -ne 0 ]; then
+        printf "This step needs root privileges.\n"
+        printf "Enter your password to continue: "
+        sudo -v || {
+            echo "✗ sudo authentication failed"
+            exit 1
+        }
+    fi
+}
+
+revoke_sudo() {
+    sudo -k 2>/dev/null || true
+}
+
 echo "→ Stopping shogun process (if running)..."
 PID=$(pgrep -f "$BINARY" 2>/dev/null || true)
 if [ -n "$PID" ]; then
@@ -30,6 +47,8 @@ else
     echo "  no $DB_CONTAINER container found"
 fi
 
+need_sudo
+
 echo "→ Removing installed binary..."
 sudo rm -f "$BINARY"
 
@@ -41,6 +60,8 @@ sudo rm -rf "$DATA_DIR"
 
 echo "→ Removing log file ($LOG_FILE)..."
 sudo rm -f "$LOG_FILE"
+
+revoke_sudo
 
 echo ""
 echo "✓ Cleanup complete. System is back to pre-install state."
