@@ -57,6 +57,7 @@ func initServices() {
 	gitService, err := git.NewGitService(logger, cfg)
 	if err != nil {
 		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
+		return
 	}
 
 	// Initialize Pipeline service
@@ -82,6 +83,7 @@ func initServices() {
 	webhookService := webhooks.NewWebhookService(logger, orch, store, encryption)
 	if err = webhookService.Load(); err != nil {
 		logger.LogNewError("Unable to load Webhooks : %v", err.Error())
+		return
 	}
 
 	// Initialize api
