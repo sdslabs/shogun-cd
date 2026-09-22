@@ -20,10 +20,25 @@ type StepWrapper struct {
 type Step interface {
 	// Returns the type of the step as a string
 	Type() string
-	// Returns the trigger condition of the step
-	Trigger() string
+	// Returns the triggers that can execute the step. An empty list means every trigger.
+	TriggerKinds() []string
 	// Runs the step execution logic
 	Execute(ctx context.Context, deps *StepDeps) (string, error)
+}
+
+func ShouldRunForTrigger(step Step, trigger string) bool {
+	triggerKinds := step.TriggerKinds()
+	if len(triggerKinds) == 0 {
+		return true
+	}
+
+	for _, triggerKind := range triggerKinds {
+		if triggerKind == trigger {
+			return true
+		}
+	}
+
+	return false
 }
 
 // UnmarshalYAML is an interface hook for custom unmarshaling of StepWrapper

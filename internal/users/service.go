@@ -52,6 +52,7 @@ func (s *service) Create(ctx context.Context, in *CreateParams) error {
 	if err := s.store.Create(ctx, &models.User{
 		Email:        in.Email,
 		PasswordHash: string(pwdHash),
+		Role:         models.RoleUser,
 	}); err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrDuplicatedKey):

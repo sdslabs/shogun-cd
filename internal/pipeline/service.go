@@ -1,6 +1,8 @@
 package pipeline
 
 import (
+	"context"
+
 	"github.com/kunalvirwal/shogun-cd/internal/git"
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
@@ -11,8 +13,10 @@ import (
 type PipelineService interface {
 	// Loads a pipeline from the specified yaml file path
 	LoadPipeline(f []byte) *Pipeline
+	// Creates a persistent pipeline run before its execution starts.
+	CreatePipelineRun(ctx context.Context, pipelineName string, trigger TriggerKind) (uint, error)
 	// Executes the given pipeline with the specified trigger
-	ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targets map[string]*target.Target, variables map[string]string) bool
+	ExecutePipeline(runID uint, pipeline *Pipeline, trigger TriggerKind, targets map[string]*target.Target, variables map[string]string) bool
 }
 
 type Service struct {

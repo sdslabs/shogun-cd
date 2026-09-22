@@ -14,7 +14,7 @@ import (
 const delimiter = "SHOGUN_CMD_DELIMITER"
 
 type ExecStep struct {
-	TriggerWhen string   `yaml:"trigger_when,omitempty"`
+	TriggerWhen []string `yaml:"trigger_when,omitempty"`
 	Target      string   `yaml:"target"` // [TODO]: change this to pointer if needed
 	Commands    []string `yaml:"commands"`
 }
@@ -23,7 +23,7 @@ func (*ExecStep) Type() string {
 	return ExecType
 }
 
-func (es *ExecStep) Trigger() string {
+func (es *ExecStep) TriggerKinds() []string {
 	return es.TriggerWhen
 }
 
@@ -61,7 +61,7 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	script.WriteString("set -eu\n")
 	for i, cmd := range es.Commands {
 
-		cmd = InterpolateVariables(cmd, deps.HookValues)
+		cmd = InterpolateVariables(cmd, deps.TriggerValues)
 		cmd, err = deps.SecretService.ResolveSecrets(ctx, cmd)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", cmd, err)

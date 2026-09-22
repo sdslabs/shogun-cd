@@ -14,7 +14,7 @@ import (
 // ExecSteps are only valid for target type server
 
 type SyncStep struct {
-	TriggerWhen string       `yaml:"trigger_when,omitempty"`
+	TriggerWhen []string     `yaml:"trigger_when,omitempty"`
 	Target      string       `yaml:"target"` // [TODO]: change this to pointer if needed
 	Files       []FileUpdate `yaml:"files"`
 }
@@ -28,7 +28,7 @@ func (*SyncStep) Type() string {
 	return SyncType
 }
 
-func (ss *SyncStep) Trigger() string {
+func (ss *SyncStep) TriggerKinds() []string {
 	return ss.TriggerWhen
 }
 
@@ -70,12 +70,12 @@ func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	defer sftpclient.Close()
 
 	for _, file := range ss.Files {
-		src := InterpolateVariables(file.Src, deps.HookValues)
+		src := InterpolateVariables(file.Src, deps.TriggerValues)
 		src, err = deps.SecretService.ResolveSecrets(ctx, src)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for source path %s: %v", file.Src, err)
 		}
-		dst := InterpolateVariables(file.Dst, deps.HookValues)
+		dst := InterpolateVariables(file.Dst, deps.TriggerValues)
 		dst, err = deps.SecretService.ResolveSecrets(ctx, dst)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for destination path %s: %v", file.Dst, err)

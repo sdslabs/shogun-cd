@@ -2,18 +2,126 @@ package controllers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/kunalvirwal/shogun-cd/api/dto"
+	pipelineSteps "github.com/kunalvirwal/shogun-cd/internal/pipeline/steps"
 )
 
 func (h *Handler) ListAllTargets(c *gin.Context) {
+	targets := h.orch.ListTargets()
+	data := make([]dto.TargetSummary, 0, len(targets))
+	for _, resource := range targets {
+		data = append(data, dto.TargetSummary{
+			Name:         resource.Metadata.Name,
+			Type:         resource.Metadata.Type,
+			Host:         resource.Spec.Host,
+			User:         resource.Spec.User,
+			Port:         resource.Spec.Port,
+			AccessSecret: resource.Spec.AccessSecret,
+		})
+	}
 
-	// [TODO] lists all targets
-
-	h.response.Success(c, "All Targets", nil)
+	h.response.Success(c, "All Targets", data)
 }
 
 func (h *Handler) ListAllPipelines(c *gin.Context) {
+	pipelines := h.orch.ListPipelines()
+	pipelineNames := make([]string, 0, len(pipelines))
+	for _, resource := range pipelines {
+		pipelineNames = append(pipelineNames, resource.Metadata.Name)
+	}
 
-	// [TODO] lists all pipelines
+	latestRuns, err := h.store.Pipeline.FetchLatestPipelineRuns(c.Request.Context(), pipelineNames)
+	if err != nil {
+		h.response.ServerError(c, err)
+		return
+	}
 
-	h.response.Success(c, "All Pipelines", nil)
+	data := make([]dto.PipelineSummary, 0, len(pipelines))
+	for _, resource := range pipelines {
+		triggers := make([]dto.PipelineTrigger, 0, len(resource.Spec.Triggers))
+		for _, trigger := range resource.Spec.Triggers {
+			triggers = append(triggers, dto.PipelineTrigger{
+				Type:  trigger.Type,
+				Paths: append([]string(nil), trigger.Paths...),
+			})
+		}
+
+		steps := make([]dto.PipelineStepSummary, 0, len(resource.Spec.Steps))
+		for i, wrapper := range resource.Spec.Steps {
+			step := wrapper.Step
+			summary := dto.PipelineStepSummary{
+				Index:       i,
+				Type:        step.Type(),
+				TriggerWhen: append([]string(nil), step.TriggerKinds()...),
+				Config:      pipelineStepDefinition(step),
+			}
+			if targeted, ok := step.(interface{ TargetInstance() string }); ok {
+				summary.Target = targeted.TargetInstance()
+			}
+			steps = append(steps, summary)
+		}
+
+		summary := dto.PipelineSummary{
+			Name:     resource.Metadata.Name,
+			Enabled:  resource.Metadata.Enabled,
+			Triggers: triggers,
+			Steps:    steps,
+		}
+
+		latestRun := latestRuns[resource.Metadata.Name]
+		if latestRun != nil {
+			summary.LastRun = &dto.PipelineRunSummary{
+				ID:          latestRun.ID,
+				TriggerKind: latestRun.TriggerKind,
+				Status:      string(latestRun.Status),
+				Success:     latestRun.Success,
+				StartedAt:   latestRun.StartedAt,
+				FinishedAt:  latestRun.FinishedAt,
+			}
+		}
+
+		data = append(data, summary)
+	}
+
+	h.response.Success(c, "All Pipelines", data)
+}
+
+// pipelineStepDefinition exposes only unresolved, manifest-defined values.
+// Secret and webhook placeholders remain untouched and are never resolved here.
+func pipelineStepDefinition(step pipelineSteps.Step) map[string]any {
+	config := make(map[string]any)
+	if triggerKinds := step.TriggerKinds(); len(triggerKinds) > 0 {
+		config["trigger_when"] = append([]string(nil), triggerKinds...)
+	}
+
+	switch typed := step.(type) {
+	case *pipelineSteps.MutateStep:
+		changes := make([]dto.PipelineMutateStepDTO, 0, len(typed.Changes))
+		for _, change := range typed.Changes {
+			changes = append(changes, dto.PipelineMutateStepDTO{
+				File:        change.File,
+				UpdateField: change.UpdateField,
+				Value:       change.Value,
+			})
+		}
+		config["changes"] = changes
+
+	case *pipelineSteps.SyncStep:
+		config["target"] = typed.Target
+		files := make([]dto.PipelineSyncStepDTO, 0, len(typed.Files))
+		for _, file := range typed.Files {
+			files = append(files, dto.PipelineSyncStepDTO{Src: file.Src, Dst: file.Dst})
+		}
+		config["files"] = files
+
+	case *pipelineSteps.ExecStep:
+		config["target"] = typed.Target
+		config["commands"] = append([]string(nil), typed.Commands...)
+
+	case *pipelineSteps.ApplyStep:
+		config["target"] = typed.Target
+		config["files"] = append([]string(nil), typed.Files...)
+	}
+
+	return config
 }

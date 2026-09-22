@@ -11,27 +11,25 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/target"
 )
 
-func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targets map[string]*target.Target, hookValues map[string]string) bool {
+func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger TriggerKind, targets map[string]*target.Target, triggerValues map[string]string) (success bool) {
+	ctx := context.Background()
+	defer func() {
+		if err := p.finishPipelineRun(ctx, runID, success); err != nil {
+			p.logger.LogNewError("Failed to persist final state for pipeline run %d: %v", runID, err)
+		}
+	}()
 
-	// [TODO] Move this check outside to caller
+	// Keep a defensive enabled check even though the orchestrator validates before creating a run.
 	if !pipeline.Metadata.Enabled {
 		p.logger.LogInfo("Pipeline %s is disabled; skipping execution", pipeline.Metadata.Name)
 		return false
 	}
 
-	if hookValues == nil {
-		hookValues = make(map[string]string)
+	if triggerValues == nil {
+		triggerValues = make(map[string]string)
 	}
 
-	found := false
-	for _, t := range pipeline.Spec.Triggers {
-		if t.Type == string(trigger) {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !pipeline.SupportsTrigger(trigger) {
 		p.logger.LogNewError("Pipeline %s does not have trigger of type %s; cannot execute", pipeline.Metadata.Name, string(trigger))
 		return false
 	}
@@ -42,48 +40,38 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targe
 		GitService:    p.gitService,
 		SecretService: p.secretService,
 		Targets:       targets,
-		HookValues:    hookValues,
+		TriggerValues: triggerValues,
 		SSHManager:    sshclient.NewSSHManager(),
 	}
 
 	// SSH Client cleanup after pipeline execution only if SSHManager was initialized
 	defer deps.SSHManager.CleanupSSHClients()
 
-	success := true
+	success = true
 	output := p.logger.LogShogunInfo("", "Starting execution of pipeline: %s", pipeline.Metadata.Name)
 	p.logger.LogInfo("Executing pipeline: %s", pipeline.Metadata.Name)
-
-	runData := &models.PipelineRun{
-		Pipeline:    pipeline.Metadata.Name,
-		TriggerKind: string(trigger),
-		StartedAt:   time.Now(),
-		Steps:       make([]models.PipelineRunStep, 0, len(pipeline.Spec.Steps)),
-	}
-
-	ctx := context.Background()
 	for i, sw := range pipeline.Spec.Steps {
 
 		step := sw.Step
+
+		if !pipelineSteps.ShouldRunForTrigger(step, string(trigger)) {
+			output = p.logger.LogShogunInfo(output, "Skipping step %d because its trigger_when list does not include pipeline trigger '%s'", i+1, string(trigger))
+			continue
+		}
+
 		output = p.logger.LogShogunInfo(output, "Executing step %d of type %s", i+1, step.Type())
 
-		stepData := models.PipelineRunStep{
+		stepData := &models.PipelineRunStep{
+			RunID:     runID,
 			StepIndex: i,
 			StepType:  step.Type(),
 			Status:    models.StepStatusInProgress,
 			StartedAt: time.Now(),
 		}
-
-		// If trigger is specified for the step, and the step's trigger doesn't match the pipeline trigger, skip the step
-		if step.Trigger() != "" && step.Trigger() != string(trigger) {
-			output = p.logger.LogShogunInfo(output, "Skipping step %d as its trigger '%s' does not match pipeline trigger '%s'", i+1, step.Trigger(), string(trigger))
-
-			stepData.Status = models.StepStatusSkipped
-			stepData.Logs = p.logger.LogShogunInfo(stepData.Logs, "Skipping step %d as its trigger '%s' does not match pipeline trigger '%s'", i+1, step.Trigger(), string(trigger))
-			now := time.Now()
-			stepData.FinishedAt = &now
-			runData.Steps = append(runData.Steps, stepData)
-
-			continue
+		if err := p.store.CreatePipelineRunStep(ctx, stepData); err != nil {
+			p.logger.LogNewError("Failed to persist start of step %d for pipeline run %d: %v", i+1, runID, err)
+			success = false
+			break
 		}
 
 		out, err := step.Execute(ctx, deps)
@@ -101,7 +89,9 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targe
 			stepData.Logs, _ = p.logger.LogShogunError(stepData.Logs, "Step %d failed: %v\n", i+1, err)
 			now := time.Now()
 			stepData.FinishedAt = &now
-			runData.Steps = append(runData.Steps, stepData)
+			if storeErr := p.store.UpdatePipelineRunStep(ctx, stepData); storeErr != nil {
+				p.logger.LogNewError("Failed to persist failure of step %d for pipeline run %d: %v", i+1, runID, storeErr)
+			}
 
 			break
 		}
@@ -111,17 +101,16 @@ func (p *Service) ExecutePipeline(pipeline *Pipeline, trigger TriggerKind, targe
 		stepData.Logs = p.logger.LogShogunInfo(stepData.Logs, "Step %d executed successfully\n", i+1)
 		now := time.Now()
 		stepData.FinishedAt = &now
-		runData.Steps = append(runData.Steps, stepData)
+		if err := p.store.UpdatePipelineRunStep(ctx, stepData); err != nil {
+			p.logger.LogNewError("Failed to persist success of step %d for pipeline run %d: %v", i+1, runID, err)
+			success = false
+			break
+		}
 
 		p.logger.Log("Step %d executed successfully", i+1)
 	}
 
 	fmt.Println(output)
-
-	runData.Success = &success
-	now := time.Now()
-	runData.FinishedAt = &now
-	p.store.SavePipelineRunWithSteps(ctx, runData)
 
 	return success
 }
