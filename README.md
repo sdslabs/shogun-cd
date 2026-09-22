@@ -22,34 +22,27 @@ Shogun helps one Git repository coordinate deployments across many servers.
 
 ## How it works
 
-```text
-                          +-----------------------------+
-                          |   Manifest Git repository   |
-                          | Pipelines / Targets / files |
-                          +-----------------------------+
-                                         |
-                              clone, poll, and index
-                                         |
-                      webhook            v
-  +-----------+  + build values.   +-----------+
-  | CI system |------------------->| Shogun-CD |
-  +-----------+                    +-----------+
-                                         |
-                                 match a pipeline
-                                         v
-   +-------------------+     +----------------------+
-   | encrypted secrets |---->| run steps in order:  |
-   |   (PostgreSQL)    |     | sync / exec / mutate |
-   +-------------------+     +----------------------+
-                                         |
-                           +-------------+-------------+
-              sync / exec  v                           v mutate
-                   +--------------+           +-----------------+
-                   | Your servers |           | Git repository  |
-                   | (SSH / SFTP) |           | (commit & push) |
-                   +--------------+           +-----------------+
-```
+```mermaid
+graph TD
+  %% Nodes
+  A["Manifest Git repository<br/>Pipelines / Targets / files"]
+  B["CI system"]
+  C["Shogun-CD"]
+  D["encrypted secrets<br/>(PostgreSQL)"]
+  E["run steps in order:<br/>sync / exec / mutate"]
+  F["Your servers<br/>(SSH / SFTP)"]
+  G["Git repository<br/>(commit & push)"]
 
+  %% Connections
+  A -- "clone, poll, and index" --> C
+  B -- "webhook + build values" --> C
+  C -->|"match a pipeline"| E
+  D --> E
+  E -- "sync / exec" --> F
+  E -- "mutate" --> G
+  
+  style C fill:#ff9900,stroke:#333,stroke-width:3px,color:#000,font-weight:bold
+```
 Shogun-CD clones your manifest repository and looks for `Pipeline` and `Target` YAML files to be indexed. When a matching Git change or webhook arrives, it runs the pipeline steps in order.
 
 ## Example
