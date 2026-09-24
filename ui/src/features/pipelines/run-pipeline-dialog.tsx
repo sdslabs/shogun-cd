@@ -8,7 +8,9 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { runNumbersById } from "@/features/pipelines/run-numbers"
 import { api } from "@/lib/api/endpoints"
+import type { PipelineRun } from "@/lib/api/types"
 import { queryKeys } from "@/lib/query"
 
 const valueKeyPattern = /^[A-Za-z_][A-Za-z0-9_]*$/
@@ -63,7 +65,9 @@ export function RunPipelineDialog({ pipelineName, open, onOpenChange, onStarted 
       ])
       form.reset({ values: [] })
       onOpenChange(false)
-      toast.success(`Run #${run_id} started`)
+      const runs = queryClient.getQueryData<PipelineRun[]>(queryKeys.runs(pipelineName))
+      const runNumber = runNumbersById(runs).get(run_id)
+      toast.success(runNumber ? `Run #${runNumber} started` : "Pipeline run started")
       onStarted(run_id)
     },
   })

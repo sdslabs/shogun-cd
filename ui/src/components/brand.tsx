@@ -18,9 +18,9 @@ export function Brand({ compact = false }: { compact?: boolean }) {
         <ShogunMark className="h-6 w-9" />
       </span>
       {!compact ? (
-        <span className="flex min-w-0 flex-col leading-none">
-          <span className="truncate text-[15px] font-semibold tracking-[-0.02em]">Shogun</span>
-          <span className="mt-1 text-[9px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Continuous delivery</span>
+        <span className="flex min-w-0 flex-col">
+          <span className="text-[15px] leading-5 font-semibold tracking-[-0.02em]">Shogun</span>
+          <span className="mt-1 text-[9px] leading-3 font-semibold tracking-[0.2em] text-muted-foreground uppercase">Continuous delivery</span>
         </span>
       ) : null}
     </div>
