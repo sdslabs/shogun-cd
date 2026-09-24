@@ -125,41 +125,41 @@ func TestPipelineStepDefinitionIncludesAllManifestFields(t *testing.T) {
 		{
 			name: "mutate",
 			step: &pipelineSteps.MutateStep{
-				TriggerWhen: string(pipeline.WebhookTriggerKind),
+				TriggerWhen: []string{string(pipeline.WebhookTriggerKind)},
 				Changes: []pipelineSteps.Change{{
 					File:        "services/api/compose.yaml",
 					UpdateField: "services.api.image",
 					Value:       "{{IMAGE}}",
 				}},
 			},
-			want: `{"changes":[{"file":"services/api/compose.yaml","update_field":"services.api.image","value":"{{IMAGE}}"}],"trigger_when":"ci_webhook"}`,
+			want: `{"changes":[{"file":"services/api/compose.yaml","update_field":"services.api.image","value":"{{IMAGE}}"}],"trigger_when":["ci_webhook"]}`,
 		},
 		{
 			name: "sync",
 			step: &pipelineSteps.SyncStep{
-				TriggerWhen: string(pipeline.GitChangesTriggerKind),
+				TriggerWhen: []string{string(pipeline.GitChangesTriggerKind)},
 				Target:      "production",
 				Files:       []pipelineSteps.FileUpdate{{Src: "compose.yaml", Dst: "~/compose.yaml"}},
 			},
-			want: `{"files":[{"src":"compose.yaml","dst":"~/compose.yaml"}],"target":"production","trigger_when":"git_changes"}`,
+			want: `{"files":[{"src":"compose.yaml","dst":"~/compose.yaml"}],"target":"production","trigger_when":["git_changes"]}`,
 		},
 		{
 			name: "exec",
 			step: &pipelineSteps.ExecStep{
-				TriggerWhen: string(pipeline.WebhookTriggerKind),
+				TriggerWhen: []string{string(pipeline.WebhookTriggerKind)},
 				Target:      "production",
 				Commands:    []string{"docker compose pull", "docker compose up -d"},
 			},
-			want: `{"commands":["docker compose pull","docker compose up -d"],"target":"production","trigger_when":"ci_webhook"}`,
+			want: `{"commands":["docker compose pull","docker compose up -d"],"target":"production","trigger_when":["ci_webhook"]}`,
 		},
 		{
 			name: "apply",
 			step: &pipelineSteps.ApplyStep{
-				TriggerWhen: string(pipeline.GitChangesTriggerKind),
+				TriggerWhen: []string{string(pipeline.GitChangesTriggerKind)},
 				Target:      "cluster",
 				Files:       []string{"deployment.yaml", "service.yaml"},
 			},
-			want: `{"files":["deployment.yaml","service.yaml"],"target":"cluster","trigger_when":"git_changes"}`,
+			want: `{"files":["deployment.yaml","service.yaml"],"target":"cluster","trigger_when":["git_changes"]}`,
 		},
 	}
 

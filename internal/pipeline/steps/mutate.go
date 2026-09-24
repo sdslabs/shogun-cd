@@ -12,7 +12,7 @@ import (
 )
 
 type MutateStep struct {
-	TriggerWhen string   `yaml:"trigger_when,omitempty"`
+	TriggerWhen []string `yaml:"trigger_when,omitempty"`
 	Changes     []Change `yaml:"changes"`
 }
 
@@ -26,7 +26,7 @@ func (*MutateStep) Type() string {
 	return MutateType
 }
 
-func (ms *MutateStep) Trigger() string {
+func (ms *MutateStep) TriggerKinds() []string {
 	return ms.TriggerWhen
 }
 
@@ -50,12 +50,12 @@ func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) (string, erro
 			return deps.Logger.LogShogunError(output, "Failed to parse YAML file %s: %v", change.File, err)
 		}
 
-		change.Value = InterpolateVariables(change.Value, deps.HookValues)
+		change.Value = InterpolateVariables(change.Value, deps.TriggerValues)
 		change.Value, err = deps.SecretService.ResolveSecrets(ctx, change.Value)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.Value, err)
 		}
-		change.UpdateField = InterpolateVariables(change.UpdateField, deps.HookValues)
+		change.UpdateField = InterpolateVariables(change.UpdateField, deps.TriggerValues)
 		change.UpdateField, err = deps.SecretService.ResolveSecrets(ctx, change.UpdateField)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.UpdateField, err)

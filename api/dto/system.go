@@ -10,7 +10,7 @@ type PipelineTrigger struct {
 type PipelineStepSummary struct {
 	Index       int            `json:"index"`
 	Type        string         `json:"type"`
-	TriggerWhen string         `json:"trigger_when,omitempty"`
+	TriggerWhen []string       `json:"trigger_when,omitempty"`
 	Target      string         `json:"target,omitempty"`
 	Config      map[string]any `json:"config"`
 }

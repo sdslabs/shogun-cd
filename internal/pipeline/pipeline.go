@@ -9,7 +9,17 @@ const (
 	PipelineKind          Kind        = "Pipeline"
 	WebhookTriggerKind    TriggerKind = "ci_webhook"
 	GitChangesTriggerKind TriggerKind = "git_changes"
+	UITriggerKind         TriggerKind = "ui_trigger"
 )
+
+func IsValidTriggerKind(kind string) bool {
+	switch TriggerKind(kind) {
+	case WebhookTriggerKind, GitChangesTriggerKind, UITriggerKind:
+		return true
+	default:
+		return false
+	}
+}
 
 type Pipeline struct {
 	ApiVersion string   `yaml:"apiVersion"`
@@ -31,4 +41,14 @@ type Spec struct {
 type Trigger struct {
 	Type  string   `yaml:"type"`
 	Paths []string `yaml:"paths,omitempty"`
+}
+
+func (p *Pipeline) SupportsTrigger(kind TriggerKind) bool {
+	for _, trigger := range p.Spec.Triggers {
+		if trigger.Type == string(kind) {
+			return true
+		}
+	}
+
+	return false
 }

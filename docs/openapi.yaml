@@ -17,6 +17,8 @@ tags:
     x-displayName: Webhooks
   - name: admin/secrets
     x-displayName: Secrets
+  - name: admin/pipeline
+    x-displayName: Pipeline Runs
   - name: system/resources
     x-displayName: Resources
   - name: pipeline/runs
@@ -32,6 +34,7 @@ x-tagGroups:
     tags:
       - admin/hook
       - admin/secrets
+      - admin/pipeline
   - name: Pipeline
     tags:
       - system/resources
@@ -600,6 +603,69 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /admin/pipeline/{pipeline}/run:
+    post:
+      tags: [admin/pipeline]
+      summary: Start a UI Pipeline Run
+      description: Start an enabled pipeline that declares the `ui_trigger` trigger. The request requires an administrator JWT.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: pipeline
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartPipelineRunInput'
+      responses:
+        '202':
+          description: Pipeline run accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartPipelineRunResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Administrator access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Pipeline not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Pipeline is disabled or does not declare ui_trigger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /pipelines/{pipeline}/runs:
     get:
       tags: [pipeline/runs]
@@ -718,6 +784,34 @@ components:
           type: string
           minLength: 3
           maxLength: 32
+
+    StartPipelineRunInput:
+      type: object
+      properties:
+        values:
+          type: object
+          additionalProperties:
+            type: string
+
+    StartPipelineRunData:
+      type: object
+      required: [run_id]
+      properties:
+        run_id:
+          type: integer
+          minimum: 1
+
+    StartPipelineRunResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/StartPipelineRunData'
 
     SecretInput:
       type: object
@@ -854,7 +948,7 @@ components:
       properties:
         type:
           type: string
-          enum: [ci_webhook, git_changes]
+          enum: [ci_webhook, git_changes, ui_trigger]
         paths:
           type: array
           items:
@@ -871,8 +965,10 @@ components:
           type: string
           enum: [mutate, sync, exec, apply]
         trigger_when:
-          type: string
-          enum: [ci_webhook, git_changes]
+          type: array
+          items:
+            type: string
+            enum: [ci_webhook, git_changes, ui_trigger]
         target:
           type: string
         config:
@@ -884,8 +980,10 @@ components:
       additionalProperties: true
       properties:
         trigger_when:
-          type: string
-          enum: [ci_webhook, git_changes]
+          type: array
+          items:
+            type: string
+            enum: [ci_webhook, git_changes, ui_trigger]
         target:
           type: string
         files:

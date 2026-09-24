@@ -9,16 +9,25 @@ import (
 
 // RunPipeline executes a pipeline with the given name, trigger kind, and variables
 // It returns the persisted run ID, or an error if the run could not be started.
-func (o *orchestrator) RunPipeline(ctx context.Context, pipelineName string, triggerKind pipeline.TriggerKind, variables map[string]string) (uint, error) {
+func (o *orchestrator) RunPipeline(ctx context.Context, pipelineName string, triggerKind pipeline.TriggerKind, triggerValues map[string]string) (uint, error) {
 
 	pipelines := o.Pipelines.Load()
+	if pipelines == nil {
+		return 0, fmt.Errorf("%w: %s", ErrPipelineNotFound, pipelineName)
+	}
 	pipelineInstance, exists := (*pipelines)[pipelineName]
 	if !exists {
 		o.logger.Log("Pipeline not found: " + pipelineName)
-		return 0, fmt.Errorf("pipeline not found: %s", pipelineName)
+		return 0, fmt.Errorf("%w: %s", ErrPipelineNotFound, pipelineName)
+	}
+	if !pipelineInstance.Metadata.Enabled {
+		return 0, fmt.Errorf("%w: %s", ErrPipelineDisabled, pipelineName)
+	}
+	if !pipelineInstance.SupportsTrigger(triggerKind) {
+		return 0, fmt.Errorf("%w: %s", ErrTriggerNotConfigured, triggerKind)
 	}
 
-	runID, err := o.pipelineService.CreatePipelineRun(ctx, pipelineName, triggerKind)
+	runID, err := o.pipelineService.CreatePipelineRun(ctx, pipelineInstance.Metadata.Name, triggerKind)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create pipeline run: %w", err)
 	}
@@ -28,7 +37,7 @@ func (o *orchestrator) RunPipeline(ctx context.Context, pipelineName string, tri
 		defer o.mu.RUnlock()
 
 		targets := o.Targets.Load()
-		success := o.pipelineService.ExecutePipeline(runID, pipelineInstance, triggerKind, *targets, variables)
+		success := o.pipelineService.ExecutePipeline(runID, pipelineInstance, triggerKind, *targets, triggerValues)
 
 		if !success {
 			o.logger.Log("Pipeline execution failed: " + pipelineName)
