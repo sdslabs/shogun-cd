@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { ArrowLeft, Boxes, Braces, ChevronRight, FilePenLine, Files, GitBranch, Pause, Play, RefreshCw, Terminal, Timer } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { usePipeline, usePipelineRuns } from "@/features/pipelines/hooks"
 import { PipelineDefinition } from "@/features/pipelines/pipeline-definition"
 import { RunPipelineDialog } from "@/features/pipelines/run-pipeline-dialog"
+import { runNumbersById } from "@/features/pipelines/run-numbers"
 import { useAuth } from "@/features/auth/auth-provider"
 import { formatDateTime, formatDuration, formatRelativeTime } from "@/lib/format"
 import type { PipelineRun, PipelineStepSummary } from "@/lib/api/types"
@@ -24,6 +25,7 @@ export function PipelinePage() {
   const runsQuery = usePipelineRuns(pipelineName)
   const { claims } = useAuth()
   const pipeline = pipelineQuery.pipeline
+  const runNumbers = useMemo(() => runNumbersById(runsQuery.data), [runsQuery.data])
   const [configurationOpen, setConfigurationOpen] = useState(false)
   const [selectedDefinitionStep, setSelectedDefinitionStep] = useState(0)
   const [runDialogOpen, setRunDialogOpen] = useState(false)
@@ -101,7 +103,7 @@ export function PipelinePage() {
           <div className="mb-4 flex items-end justify-between"><div><p className="text-[10px] font-semibold tracking-[.16em] text-muted-foreground uppercase">History</p><h2 className="mt-1 text-lg font-semibold tracking-[-0.025em]">Past runs</h2></div><span className="text-xs text-muted-foreground">{pluralize(runsQuery.data?.length ?? 0, "execution")}</span></div>
           <div className="overflow-hidden rounded-xl border bg-card">
             {runsQuery.isLoading ? <RunTableSkeleton /> : runsQuery.isError ? <ErrorState error={runsQuery.error} retry={() => runsQuery.refetch()} compact /> : !runsQuery.data?.length ? <EmptyState title="No runs yet" description="This pipeline has not produced an execution record." compact /> : (
-              <Table><TableHeader><TableRow className="hover:bg-transparent"><TableHead>Run</TableHead><TableHead>Result</TableHead><TableHead>Trigger</TableHead><TableHead>Started</TableHead><TableHead>Duration</TableHead><TableHead className="w-12"><span className="sr-only">Open</span></TableHead></TableRow></TableHeader><TableBody>{runsQuery.data.map((run) => <RunRow key={run.id} run={run} onOpen={() => navigate(`/pipelines/${encodeURIComponent(pipeline.name)}/runs/${run.id}`)} />)}</TableBody></Table>
+              <Table><TableHeader><TableRow className="hover:bg-transparent"><TableHead>Run</TableHead><TableHead>Result</TableHead><TableHead>Trigger</TableHead><TableHead>Started</TableHead><TableHead>Duration</TableHead><TableHead className="w-12"><span className="sr-only">Open</span></TableHead></TableRow></TableHeader><TableBody>{runsQuery.data.map((run) => <RunRow key={run.id} run={run} runNumber={runNumbers.get(run.id)!} onOpen={() => navigate(`/pipelines/${encodeURIComponent(pipeline.name)}/runs/${run.id}`)} />)}</TableBody></Table>
             )}
           </div>
         </section>
@@ -166,8 +168,8 @@ function ExecutionPath({ steps, selectedStep, configurationOpen, onSelect }: { s
   )
 }
 
-function RunRow({ run, onOpen }: { run: PipelineRun; onOpen: () => void }) {
-  return <TableRow role="link" tabIndex={0} onClick={onOpen} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onOpen() }} className="group cursor-pointer"><TableCell><div className="flex items-center gap-3"><StatusSignal status={run.status} size="sm" /><span className="font-mono text-xs font-semibold">#{run.id}</span></div></TableCell><TableCell><StatusText status={run.status} /></TableCell><TableCell><Badge variant="outline">{titleCase(run.trigger_kind)}</Badge></TableCell><TableCell><span className="text-xs font-medium">{formatRelativeTime(run.started_at)}</span><p className="mt-1 text-[10px] text-muted-foreground" title={formatDateTime(run.started_at)}>{formatDateTime(run.started_at)}</p></TableCell><TableCell><span className="flex items-center gap-1.5 text-xs"><Timer className="size-3 text-muted-foreground" />{formatDuration(run.started_at, run.finished_at)}</span></TableCell><TableCell><ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></TableCell></TableRow>
+function RunRow({ run, runNumber, onOpen }: { run: PipelineRun; runNumber: number; onOpen: () => void }) {
+  return <TableRow role="link" tabIndex={0} onClick={onOpen} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onOpen() }} className="group cursor-pointer"><TableCell><div className="flex items-center gap-3"><StatusSignal status={run.status} size="sm" /><span className="font-mono text-xs font-semibold">#{runNumber}</span></div></TableCell><TableCell><StatusText status={run.status} /></TableCell><TableCell><Badge variant="outline">{titleCase(run.trigger_kind)}</Badge></TableCell><TableCell><span className="text-xs font-medium">{formatRelativeTime(run.started_at)}</span><p className="mt-1 text-[10px] text-muted-foreground" title={formatDateTime(run.started_at)}>{formatDateTime(run.started_at)}</p></TableCell><TableCell><span className="flex items-center gap-1.5 text-xs"><Timer className="size-3 text-muted-foreground" />{formatDuration(run.started_at, run.finished_at)}</span></TableCell><TableCell><ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" /></TableCell></TableRow>
 }
 
 function PipelinePageSkeleton() { return <div><div className="border-b px-9 py-8"><Skeleton className="h-3 w-20" /><Skeleton className="mt-4 h-8 w-64" /><Skeleton className="mt-3 h-4 w-44" /></div><PageBody><Skeleton className="h-64 w-full rounded-xl" /><Skeleton className="mt-8 h-72 w-full rounded-xl" /></PageBody></div> }

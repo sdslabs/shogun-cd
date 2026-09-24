@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { usePipelines } from "@/features/pipelines/hooks"
+import { usePipelineRuns, usePipelines } from "@/features/pipelines/hooks"
+import { runNumbersById } from "@/features/pipelines/run-numbers"
 import { formatDuration, formatRelativeTime } from "@/lib/format"
 import type { PipelineSummary } from "@/lib/api/types"
 import { pluralize, titleCase } from "@/lib/utils"
@@ -70,13 +71,15 @@ export function PipelinesPage() {
 
 function PipelineRow({ pipeline, onOpen }: { pipeline: PipelineSummary; onOpen: () => void }) {
   const latest = pipeline.last_run
+  const runsQuery = usePipelineRuns(latest ? pipeline.name : undefined)
+  const runNumber = latest ? runNumbersById(runsQuery.data).get(latest.id) : undefined
   const status = !pipeline.enabled ? "disabled" : latest?.status ?? "idle"
   return (
     <TableRow tabIndex={0} role="link" onClick={onOpen} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onOpen() }} className={!pipeline.enabled ? "bg-muted/15 text-muted-foreground" : "group cursor-pointer"}>
       <TableCell className="py-3.5">
         <div className="flex items-center gap-3.5"><StatusSignal status={status} /><div className="min-w-0"><div className="flex items-center gap-2"><span className="truncate font-semibold tracking-[-0.012em] text-foreground">{pipeline.name}</span>{!pipeline.enabled ? <Badge variant="outline">Disabled</Badge> : null}</div><p className="mt-1 text-[11px] text-muted-foreground">{pluralize(pipeline.steps.length, "step")} · {pluralize(pipeline.triggers.length, "trigger")}</p></div></div>
       </TableCell>
-      <TableCell>{latest ? <div><StatusText status={latest.status} /><p className="mt-1.5 text-[11px] text-muted-foreground">Run #{latest.id} · {titleCase(latest.trigger_kind)}</p></div> : <span className="text-xs text-muted-foreground">No executions yet</span>}</TableCell>
+      <TableCell>{latest ? <div><StatusText status={latest.status} /><p className="mt-1.5 text-[11px] text-muted-foreground">{runNumber ? `Run #${runNumber}` : "Latest run"} · {titleCase(latest.trigger_kind)}</p></div> : <span className="text-xs text-muted-foreground">No executions yet</span>}</TableCell>
       <TableCell>{latest ? <div><span className="text-xs font-medium text-foreground">{formatRelativeTime(latest.started_at)}</span><p className="mt-1.5 text-[11px] text-muted-foreground">{formatDuration(latest.started_at, latest.finished_at)}</p></div> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
       <TableCell><div className="flex max-w-64 flex-wrap gap-1.5">{pipeline.steps.slice(0, 4).map((step) => <Badge variant="secondary" key={`${step.index}-${step.type}`}>{titleCase(step.type)}</Badge>)}{pipeline.steps.length > 4 ? <Badge variant="outline">+{pipeline.steps.length - 4}</Badge> : null}</div></TableCell>
       <TableCell><ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" /></TableCell>
