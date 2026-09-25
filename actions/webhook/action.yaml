@@ -1,0 +1,68 @@
+name: Shogun Webhook
+description: Trigger a Shogun-CD pipeline through its HMAC-signed webhook endpoint (POST /hook/{slug}).
+author: SDSLabs
+
+inputs:
+  url:
+    description: Full webhook URL, for example https://shogun.example.com/api/hook/shogun_s0mes1ug
+    required: true
+  secret:
+    description: The webhook secret shown once at creation time. Composite actions cannot read the secrets context, so pass secrets.SHOGUN_HMAC_SECRET here.
+    required: true
+  payload:
+    description: Flat JSON object with string values, sent verbatim as the request body and used for {{VAR}} interpolation in pipeline steps.
+    required: false
+    default: '{}'
+  # A default only applies when the input is omitted, an explicit empty string still reaches
+  # the script, which is why send-webhook.sh keeps its own ${SHOGUN_TIMEOUT:-30} fallback.
+  curl-timeout:
+    description: Maximum seconds for the whole request, passed to curl --max-time.
+    required: false
+    default: '30'
+
+outputs:
+  status-code:
+    description: HTTP status code returned by the Shogun API.
+    value: ${{ steps.send.outputs.status-code }}
+  response-body:
+    description: Raw JSON response body returned by the Shogun API.
+    value: ${{ steps.send.outputs.response-body }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        SHOGUN_WEBHOOK_URL: ${{ inputs.url }}
+        SHOGUN_SECRET: ${{ inputs.secret }}
+        SHOGUN_PAYLOAD: ${{ inputs.payload }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$SHOGUN_WEBHOOK_URL" ]; then
+          echo "::error::inputs.url is required"
+          exit 1
+        fi
+        if [ -z "$SHOGUN_SECRET" ]; then
+          echo "::error::inputs.secret is required"
+          exit 1
+        fi
+        if [ -z "$SHOGUN_PAYLOAD" ]; then
+          echo "::error::inputs.payload must not be empty, the API requires a JSON body"
+          exit 1
+        fi
+
+    - name: Ensure required tools
+      shell: bash
+      run: bash "${{ github.action_path }}/scripts/ensure-tools.sh"
+
+    - name: Sign and send webhook
+      id: send
+      shell: bash
+      env:
+        SHOGUN_WEBHOOK_URL: ${{ inputs.url }}
+        SHOGUN_SECRET: ${{ inputs.secret }}
+        SHOGUN_PAYLOAD: ${{ inputs.payload }}
+        SHOGUN_TIMEOUT: ${{ inputs.curl-timeout }}
+      run: bash "${{ github.action_path }}/scripts/send-webhook.sh"
