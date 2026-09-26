@@ -1,0 +1,51 @@
+x-logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+services:
+  shogun:
+    image: devyarustagi/shogun:latest #todo: change this to labs registry
+    volumes:
+      - type: bind
+        source: ${DATA_DIR}
+        target: /var/lib/shogun
+    env_file:
+      - .env
+    depends_on:
+      db: 
+        condition: service_healthy
+        required: false
+    logging: *default-logging
+    restart: unless-stopped
+  db:
+    image: postgres:18.3-alpine3.23
+    environment:
+      - POSTGRES_USER=${DB_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${DB_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${DB_POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_POSTGRES_USER}", "-d", "${DB_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    restart: unless-stopped
+
+  ui:
+    image: devyarustagi/shogun-ui:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+     - shogun
+    restart: unless-stopped
+    logging: *default-logging
+
+volumes:
+  db-data:
+
+
+
+

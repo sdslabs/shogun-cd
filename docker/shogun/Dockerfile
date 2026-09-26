@@ -18,9 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY --from=builder /build/sample.config.yaml /etc/shogun/config.yaml
+COPY sample.config.yaml /etc/shogun/config.yaml
+COPY docker/shogun/entrypoint.sh /usr/local/bin/config-builder.sh
 COPY --from=builder /build/shogun ./shogun
+
+RUN chmod +x /usr/local/bin/config-builder.sh
 
 EXPOSE 7007
 
-CMD ["./shogun"]
+ENTRYPOINT ["/usr/local/bin/config-builder.sh"]
+CMD ["/app/shogun"]
