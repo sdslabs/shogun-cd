@@ -7,6 +7,7 @@ import type { PipelineRunStep } from "@/lib/api/types"
 import { cn, titleCase } from "@/lib/utils"
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[([0-9;]*)m`, "g")
+const PROMPT_PATTERN = /^(\s*[^\s@]+@[^\s$]+\$)(?=\s|$)/
 const ansiClasses: Record<number, string> = {
   31: "text-red-400",
   32: "text-emerald-400",
@@ -70,7 +71,9 @@ export function LogViewer({ steps, selectedStep }: { steps: PipelineRunStep[]; s
             {selectedStep == null ? <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-[#0d0f11]/95 py-1 text-[10px] font-semibold tracking-[.12em] text-[var(--terminal-accent)] uppercase backdrop-blur"><span className="size-1.5 rounded-full bg-current" />Step {step.step_index + 1} · {titleCase(step.step_type)}</div> : null}
             {lines.map((line, index) => {
               const matches = !normalizedSearch || line.toLowerCase().includes(normalizedSearch)
-              return <div key={index} className={cn("flex min-w-max", wrap && "min-w-0", normalizedSearch && matches && "bg-amber-400/8")}><span className="mr-4 w-8 shrink-0 select-none text-right text-zinc-700">{index + 1}</span><code className={cn("block", wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{renderAnsiLine(line)}</code></div>
+              const plainLine = line.replace(ANSI_PATTERN, "")
+              const prompt = plainLine.match(PROMPT_PATTERN)?.[1]
+              return <div key={index} className={cn("flex min-w-max", wrap && "min-w-0", normalizedSearch && matches && "bg-amber-400/8")}><span className="mr-4 w-8 shrink-0 select-none text-right text-zinc-700">{index + 1}</span><code className={cn("block", wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{prompt ? <><span className="font-bold text-[var(--terminal-accent)]">{prompt}</span><span className="text-zinc-300">{plainLine.slice(prompt.length)}</span></> : renderAnsiLine(line)}</code></div>
             })}
           </div>
         ))}
