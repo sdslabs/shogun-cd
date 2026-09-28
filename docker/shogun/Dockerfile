@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -buildmode=pie -ldflags "-s -w" -o shogun ./cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -buildmode=pie -ldflags "-s -w" -o shogun ./cmd
 
 FROM debian:12.15-slim AS runner
 

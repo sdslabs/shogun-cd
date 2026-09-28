@@ -10,7 +10,7 @@ COPY ./ui .
 
 RUN npm run build
 
-FROM nginx:1.30.5-alpine3.24
+FROM nginxinc/nginx-unprivileged:1.30-alpine3.24-slim
 
 COPY --from=builder /build/dist /usr/share/nginx/html
 
