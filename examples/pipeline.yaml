@@ -29,6 +29,7 @@ spec:
         # execs the commands on the server
         - exec:
               target: prod1
+              # shell: sh (defaults to bash)
               commands:
                   - "cd ~/api/"
                   - "docker compose up -d"

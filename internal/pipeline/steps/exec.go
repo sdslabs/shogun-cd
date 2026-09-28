@@ -16,7 +16,19 @@ const delimiter = "SHOGUN_CMD_DELIMITER"
 type ExecStep struct {
 	TriggerWhen string   `yaml:"trigger_when,omitempty"`
 	Target      string   `yaml:"target"` // [TODO]: change this to pointer if needed
+	Shell       string   `yaml:"shell,omitempty"`
 	Commands    []string `yaml:"commands"`
+}
+
+func (es *ExecStep) shellPath() (string, error) {
+	switch es.Shell {
+	case "", "bash":
+		return "/bin/bash", nil
+	case "sh":
+		return "/bin/sh", nil
+	default:
+		return "", fmt.Errorf("unsupported shell %q: expected bash or sh", es.Shell)
+	}
 }
 
 func (*ExecStep) Type() string {
@@ -33,6 +45,10 @@ func (es *ExecStep) TargetInstance() string {
 
 func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error) {
 	var output string
+	shellPath, err := es.shellPath()
+	if err != nil {
+		return deps.Logger.LogShogunError(output, "Invalid shell for exec step: %v", err)
+	}
 	// Validate target
 	targetInstance, exists := deps.Targets[es.Target]
 	if !exists {
@@ -96,7 +112,7 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 		defer close(done)
 		defer session.Close()
 		out, execErr = session.CombinedOutput(
-			"/bin/sh -s <<'SHOGUN_EOF'\n" +
+			shellPath + " -s <<'SHOGUN_EOF'\n" +
 				script.String() +
 				"SHOGUN_EOF\n",
 		)
