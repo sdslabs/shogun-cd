@@ -40,6 +40,9 @@ services:
       - "8080:8080"
     depends_on:
      - shogun
+    environment:
+     - SHOGUN_HOST=${SHOGUN_HOST}
+     - SHOGUN_PORT=${SHOGUN_PORT}
     restart: unless-stopped
     logging: *default-logging
 

@@ -14,7 +14,7 @@ FROM nginx:1.30.5-alpine3.24
 
 COPY --from=builder /build/dist /usr/share/nginx/html
 
-COPY ./docker/ui/nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/ui/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 8080
 
