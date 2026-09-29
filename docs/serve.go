@@ -19,7 +19,7 @@ func Serve(r *gin.Engine) {
 	})
 
 	d.GET("/", func(c *gin.Context) {
-		html := getScalarHTML("/docs/spec")
+		html := getScalarHTML("spec")
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 	})
 }

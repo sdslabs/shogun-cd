@@ -1,0 +1,15 @@
+.git/
+**/.gitignore
+**/*.md
+.air.toml
+makefile
+ui/
+scripts/
+examples/
+.data/
+.commandcode/
+**/.env*
+.env*
+tmp/
+*.log
+config.yaml

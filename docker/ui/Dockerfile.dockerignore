@@ -1,0 +1,9 @@
+*
+
+!ui
+!docker
+
+**/.env*
+ui/node_modules
+ui/dist
+**/*.md
