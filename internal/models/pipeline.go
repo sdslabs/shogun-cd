@@ -7,10 +7,29 @@ import (
 // NOTE : the values of constants must be consistent to the "column" in gorm tags.
 const (
 	// table name
+	PipelineTableName = "pipelines"
+	// columns
+	PipelineColName          = "name"
+	PipelineColNextRunNumber = "next_run_number"
+)
+
+type Pipeline struct {
+	Name          string        `gorm:"column:name; primaryKey; not null; type:varchar(50)" json:"name"`
+	NextRunNumber uint          `gorm:"column:next_run_number; not null; default:1" json:"-"`
+	Runs          []PipelineRun `gorm:"foreignKey:Pipeline; references:Name; constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"runs,omitempty"`
+}
+
+func (Pipeline) TableName() string {
+	return PipelineTableName
+}
+
+const (
+	// table name
 	PipelineRunTableName = "pipeline_runs"
 	// columns
 	PipelineRunColID          = "id"
 	PipelineRunColPipeline    = "pipeline"
+	PipelineRunColRunNumber   = "run_number"
 	PipelineRunColTriggerKind = "trigger_kind"
 	PipelineRunColStatus      = "status"
 	PipelineRunColSuccess     = "success"
@@ -23,11 +42,11 @@ const (
 type PipelineRunStatus string
 
 const (
-	PipelineRunStatusQueued    PipelineRunStatus = "queued"  // not yet being used
+	PipelineRunStatusQueued    PipelineRunStatus = "queued" // not yet being used
 	PipelineRunStatusRunning   PipelineRunStatus = "running"
 	PipelineRunStatusSucceeded PipelineRunStatus = "succeeded"
 	PipelineRunStatusFailed    PipelineRunStatus = "failed"
-	PipelineRunStatusCancelled PipelineRunStatus = "cancelled"  // not yet being used
+	PipelineRunStatusCancelled PipelineRunStatus = "cancelled" // not yet being used
 )
 
 func (s PipelineRunStatus) IsValid() bool {
@@ -45,12 +64,13 @@ func (s PipelineRunStatus) IsValid() bool {
 
 type PipelineRun struct {
 	ID          uint              `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	Pipeline    string            `gorm:"column:pipeline; index; not null; type:varchar(50)" json:"pipeline"`
+	Pipeline    string            `gorm:"column:pipeline; not null; type:varchar(50); uniqueIndex:uniq_pipeline_run_number,priority:1" json:"pipeline"`
+	RunNumber   uint              `gorm:"column:run_number; not null; uniqueIndex:uniq_pipeline_run_number,priority:2" json:"run_number"`
 	TriggerKind string            `gorm:"column:trigger_kind; not null; type:varchar(32)" json:"trigger_kind"`
-	Status      PipelineRunStatus `gorm:"column:status; not null; default:queued; type:varchar(32); index" json:"status"`
+	Status      PipelineRunStatus `gorm:"column:status; not null; default:queued; type:varchar(32)" json:"status"`
 	Success     *bool             `gorm:"column:success" json:"success"`
-	StartedAt   time.Time         `gorm:"column:started_at; not null; index" json:"started_at"`
-	FinishedAt  *time.Time        `gorm:"column:finished_at; index" json:"finished_at,omitempty"`
+	StartedAt   time.Time         `gorm:"column:started_at; not null" json:"started_at"`
+	FinishedAt  *time.Time        `gorm:"column:finished_at" json:"finished_at,omitempty"`
 	Steps       []PipelineRunStep `gorm:"foreignKey:RunID;references:ID" json:"steps"`
 }
 
@@ -99,8 +119,8 @@ type PipelineRunStep struct {
 	StepType   string     `gorm:"column:step_type; type:varchar(32); not null" json:"step_type"`
 	Status     StepStatus `gorm:"column:status; type: varchar(32); not null; default:failed" json:"status"`
 	Logs       string     `gorm:"column:logs; type:text" json:"logs"`
-	StartedAt  time.Time  `gorm:"column:started_at; index" json:"started_at"`
-	FinishedAt *time.Time `gorm:"column:finished_at; index" json:"finished_at"`
+	StartedAt  time.Time  `gorm:"column:started_at" json:"started_at"`
+	FinishedAt *time.Time `gorm:"column:finished_at" json:"finished_at"`
 }
 
 func (PipelineRunStep) TableName() string {
