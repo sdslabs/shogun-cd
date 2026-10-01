@@ -49,7 +49,7 @@ export function StepChain({ steps, runSteps, selectedStep, onSelect, compact = f
               <button type="button" disabled={!interactive} onClick={() => onSelect?.(step.index)} className={cn("group flex w-28 flex-col items-center text-center outline-none disabled:cursor-default", isSelected && "text-primary")}>
                 <StatusSignal status={runStep?.status ?? "idle"} size="md" className={cn("rounded-full transition-shadow", isSelected && "shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_12%,transparent)]")} />
                 <span className="mt-2 text-xs font-semibold">{index + 1}. {titleCase(step.type)}</span>
-                <span className="mt-0.5 max-w-24 truncate text-[10px] text-muted-foreground">{step.target?.includes("{{") ? "runtime target" : step.target || step.trigger_when || "pipeline"}</span>
+                <span className="mt-0.5 max-w-24 truncate text-[10px] text-muted-foreground">{step.target?.includes("{{") ? "runtime target" : step.target || step.trigger_when?.join(", ") || "pipeline"}</span>
               </button>
             </div>
           )

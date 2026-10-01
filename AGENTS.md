@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Shogun-CD is a self-hosted continuous delivery tool written in Go. It watches a Git repository for YAML-defined `Pipeline` and `Target` manifests, then deploys changes to servers via SSH/SFTP, mutates YAML files and pushes commits back, or triggers pipelines via webhooks. It runs as a single binary with an embedded HTTP API (Gin), a PostgreSQL-backed store (GORM), and a git polling loop.
+Shogun-CD is a self-hosted continuous delivery tool with a Go control plane and a React web UI. It watches a Git repository for YAML-defined `Pipeline` and `Target` manifests, then deploys changes to servers via SSH/SFTP, mutates YAML files and pushes commits back, or triggers pipelines through Git changes, CI webhooks, or an authenticated admin UI action. The backend runs as a single binary with an embedded HTTP API (Gin), a PostgreSQL-backed store (GORM), and a git polling loop. The Vite-based UI is currently built and served separately from the Go binary.
 
 ## Tech Stack
 
@@ -15,6 +15,10 @@ Shogun-CD is a self-hosted continuous delivery tool written in Go. It watches a 
 - **doublestar** (`github.com/bmatcuk/doublestar/v4`) — glob matching for git trigger paths
 - **go.yaml.in/yaml/v3** — YAML parsing with custom unmarshaling (uses `yaml.Node` for mutation)
 - **Air** (`.air.toml`) — hot-reload for local development
+- **React 19 + TypeScript 6 + Vite 8** — web UI and development server
+- **Tailwind CSS 4 + Radix UI** — UI styling and accessible component primitives
+- **TanStack Query + React Router** — API state and client-side routing
+- **React Hook Form + Zod** — frontend form state and validation
 
 ## Build & Run
 
@@ -26,9 +30,23 @@ make start
 go run ./cmd
 
 # Config: copy sample.config.yaml → config.yaml
+
+# Backend checks
+go test ./...
+go vet ./...
+
+# Run the UI separately (Vite proxies /api to localhost:7007)
+cd ui
+npm install
+npm run dev
+
+# UI checks
+npm run typecheck
+npm run lint
+npm test
 ```
 
-The makefile uses `docker run` for a local PostgreSQL container. The app auto-migrates all models on startup via `db.AutoMigrate()`.
+The makefile uses `docker run` for a local PostgreSQL container. The app auto-migrates all models on startup via `db.AutoMigrate()`. In development, the UI defaults to `/api` and Vite rewrites that prefix when proxying to the Go API on port 7007. Production deployment must serve the UI separately and configure a reverse proxy or `VITE_API_BASE_URL`.
 
 ## Directory Structure
 
@@ -69,6 +87,14 @@ internal/             # Core application logic
   users/              # User service (bcrypt hashing, role management)
   utils/              # Colored logger with Shogun-styled pipeline log accumulation
   webhooks/           # Webhook CRUD, HMAC/token verification, registry, resolve
+
+scripts/              # Interactive install and uninstall scripts for the backend binary
+
+ui/                   # React/TypeScript web interface (separate Vite application)
+  src/app/            # Router, protected/admin routes, shell, sidebar
+  src/features/       # Auth, pipelines/runs, targets, webhooks, and secrets pages
+  src/lib/api/        # Typed API client, endpoints, and response models
+  src/components/     # Shared application and Radix-based UI components
 ```
 
 ## Architecture & Key Abstractions
@@ -78,8 +104,8 @@ internal/             # Core application logic
 Every service package exposes an interface consumed by other packages:
 
 - **`git.GitService`** — Clone, Pull, CommitAndPushChanges, GetPullEvents, LockRepo/UnlockRepo/RLockRepo/RUnlockRepo
-- **`orchestrator.Orchestrator`** — Start, RunIndexer, StartPoller, RunPipeline, PipelineExists
-- **`pipeline.PipelineService`** — LoadPipeline, ExecutePipeline
+- **`orchestrator.Orchestrator`** — Start, RunIndexer, StartPoller, RunPipeline, PipelineExists, ListPipelines, ListTargets
+- **`pipeline.PipelineService`** — LoadPipeline, CreatePipelineRun, ExecutePipeline
 - **`target.TargetService`** — LoadTarget
 - **`secrets.SecretService`** — SetSecrets, FindMany, FetchSecret, ResolveSecrets, DeleteSecret
 - **`webhooks.WebhookService`** — Create, Resolve, Delete, Find, SetStatus, Load
@@ -91,7 +117,7 @@ Every service package exposes an interface consumed by other packages:
 
 ### Concurrency Model
 
-- **Orchestrator** uses `atomic.Pointer` for `PipelineMap` and `TargetMap` — atomically swapped after indexing. An `sync.RWMutex` (`mu`) protects indexer vs. pull operations.
+- **Orchestrator** uses `atomic.Pointer` for `PipelineMap` and `TargetMap` — atomically swapped after indexing. A `sync.RWMutex` (`mu`) serializes indexing and pulls against running pipelines; executions hold a read lock for their duration.
 - **Git service** uses `sync.RWMutex` (`repo.mu`) for exclusive access during clone/pull/mutate and shared access during indexing.
 - **Lock ordering rule**: Pipeline lock MUST be acquired before repo lock to avoid deadlocks (enforced in indexer and mutate steps).
 - **Webhook service** uses `sync.RWMutex` on its in-memory registry.
@@ -114,19 +140,19 @@ Every service package exposes an interface consumed by other packages:
 
 ### Pipeline Execution Flow
 
-1. **Trigger sources**: Git poller detects file changes → matches `git_changes` triggers via doublestar globs, or webhook resolves with `ci_webhook` trigger.
-2. **Orchestrator.RunPipeline** checks existence, launches goroutine.
-3. **PipelineService.ExecutePipeline** validates trigger, creates `StepDeps` with SSHManager, iterates steps in order.
+1. **Trigger sources**: Git poller detects file changes → matches `git_changes` triggers via doublestar globs; webhooks resolve with `ci_webhook`; and an admin may start an enabled `ui_trigger` pipeline through `POST /admin/pipeline/:pipeline/run` with a JWT.
+2. **Orchestrator.RunPipeline** checks existence, enabled state, and trigger declaration before synchronously creating a `running` `PipelineRun` record. It returns the ID before launching execution in a goroutine.
+3. **PipelineService.ExecutePipeline** performs defensive validation, creates `StepDeps` with an SSH manager and `TriggerValues`, and iterates matching steps in order.
 4. Each step type (`mutate`, `sync`, `exec`, `apply`) implements the `Step` interface with custom YAML unmarshaling via `StepWrapper.UnmarshalYAML`.
 5. **mutate**: Locks repo → reads YAML via `yaml.Node` → traverses `field.path` (supports `[index]`) → writes temp file → renames → commits and pushes.
 6. **sync**: Validates server-type target → fetches SSH key from secrets → SFTP client → atomic upload via tmp file rename.
 7. **exec**: Validates server-type target → fetches SSH key → runs commands via `sh -s` heredoc with `set -eu`, interpolates `{{VARS}}`.
 8. **apply** (Kubernetes): Not yet implemented — stub only.
-9. Run results (steps + status) saved to DB via `store.PipelineStore.SavePipelineRunWithSteps`.
+9. Each executed step is inserted as `in_progress`, then updated to `succeeded` or `failed`. The parent run is finalized as `succeeded` or `failed`. Steps excluded by `trigger_when` are currently not persisted as skipped rows.
 
 ### YAML Processing Pattern
 
-Pipeline and Target YAML both use `apiVersion: shogun.dev/v1` with custom unmarshaling. The indexer walks the repo, reads every `.yaml`/`.yml`, checks the `Meta{APIVersion, Kind}` header, then dispatches to `LoadPipeline` or `LoadTarget`. Pipeline steps use a custom `StepWrapper.UnmarshalYAML` that reads the first mapping key as the step type and decodes the value into the appropriate `Step` implementation.
+Pipeline and Target YAML both use `apiVersion: shogun.dev/v1` with custom unmarshaling. The indexer walks the repo, reads every `.yaml`/`.yml`, checks the `Meta{APIVersion, Kind}` header, then dispatches to `LoadPipeline` or `LoadTarget`. Pipelines may declare each of `ci_webhook`, `git_changes`, and `ui_trigger` once. Pipeline steps use a custom `StepWrapper.UnmarshalYAML` that reads the first mapping key as the step type and decodes the value into the appropriate `Step` implementation. `trigger_when` is a list of declared trigger kinds; an omitted list means the step runs for every pipeline trigger.
 
 ### Mutate Step Field Path Syntax
 
@@ -135,7 +161,7 @@ Dot-separated path with optional bracket indices: `services.api.image` or `conta
 ### Secret Resolution
 
 Two-level variable interpolation in pipeline steps:
-- `{{VAR}}` — resolved from webhook JSON payload (flat key-value map)
+- `{{VAR}}` — resolved from `TriggerValues`: a webhook's flat JSON payload or the admin UI run request's `values` map
 - `{{SECRET_NAME}}` — resolved from encrypted DB secrets
 
 ### Webhook Authentication
@@ -151,8 +177,8 @@ Two auth methods via headers:
 | User | users | id (uuid), email (unique), password_hash, role, is_active |
 | Webhook | webhooks | id (uuid), slug (unique), secret (encrypted), pipeline, alias, is_active |
 | Secret | secrets | id (uuid), name (unique), value (encrypted) |
-| PipelineRun | pipeline_runs | id, pipeline, trigger_kind, success, started_at, finished_at |
-| PipelineRunStep | pipeline_run_steps | run_id + step_index (composite PK), step_type, status, logs |
+| PipelineRun | pipeline_runs | id, pipeline, trigger_kind, status, success, started_at, finished_at |
+| PipelineRunStep | pipeline_run_steps | run_id + step_index (composite PK), step_type, status, logs, started_at, finished_at |
 
 ### API Routes
 
@@ -171,24 +197,33 @@ Two auth methods via headers:
 | admin/secrets | GET | /admin/secrets | JWT+Admin | ListAllSecrets |
 | admin/secrets | POST | /admin/secrets | JWT+Admin | SetSecrets |
 | admin/secrets | DELETE | /admin/secrets/:secret | JWT+Admin | DeleteSecret |
-| system | GET | /system/targets | JWT | Stub (TODO) |
-| system | GET | /system/pipelines | JWT | Stub (TODO) |
+| admin/pipeline | POST | /admin/pipeline/:pipeline/run | JWT+Admin | StartPipelineRun (`ui_trigger` only) |
+| system | GET | /system/targets | JWT | ListAllTargets (indexed target summaries) |
+| system | GET | /system/pipelines | JWT | ListAllPipelines (definitions + latest run) |
 | pipelines | GET | /pipelines/:pipeline/runs/:run_id | JWT | ListPipelineRuns |
 | pipelines | GET | /pipelines/:pipeline/runs | JWT | ListPipelineRuns |
 | pipelines | GET | /pipelines/:pipeline/runs/:run_id/logs | JWT | Stub (TODO) |
+
+### Web UI Status
+
+- Routes cover login/registration, pipeline summaries and definitions, run history/details, target details, webhooks, and admin-only secrets.
+- Pipeline and target definitions are read-only in the UI because Git remains their source of truth.
+- Run pages poll the existing run-detail endpoints while a run is `queued` or `running`; there is no live log stream yet.
+- Admin users can create, pause/resume, and delete webhooks and can create/replace/delete secrets. Webhook secrets are shown only in the creation response.
+- For an enabled pipeline declaring `ui_trigger`, admin users see a Run pipeline button. Its dialog submits string key-value `TriggerValues`; non-admin users never see the control, and disabled pipelines show it disabled.
+- The frontend API client defaults to `/api`; Vite strips that prefix and proxies requests to the Go API during development.
+- The Go API does not currently embed or serve the built frontend.
 
 ### Key TODO Items (from codebase)
 
 - Kubernetes `apply` step implementation
 - API key management (stubs in `controllers/api-key.go`)
-- Target and pipeline listing API (stubs in `controllers/system.go`)
 - Live pipeline log streaming
 - Server graceful shutdown via context
-- Move pipeline enable check outside ExecutePipeline
 - Host key verification for SSH
 - Tighten CORS allowed origins
 - CLI for shogun
-- UI for shogun
+- Package and serve/deploy the UI for production (the UI itself is implemented as a separate Vite app)
 - Remove legacy `InMemorySecretService` once DB secrets are stable
 
 ## Conventions

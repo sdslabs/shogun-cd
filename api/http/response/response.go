@@ -9,10 +9,12 @@ import (
 type Responder interface {
 	Success(c *gin.Context, message string, data interface{})
 	Created(c *gin.Context, message string, data interface{})
+	Accepted(c *gin.Context, message string, data interface{})
 	Error(c *gin.Context, statusCode int, message string, err error)
 	BadRequest(c *gin.Context, message string, err error)
 	Unauthorized(c *gin.Context, message string, err error)
 	Forbidden(c *gin.Context, message string, err error)
+	Conflict(c *gin.Context, message string, err error)
 	NotFound(c *gin.Context, message string, err error)
 	ServerError(c *gin.Context, err error)
 }
@@ -50,6 +52,14 @@ func (rh *responseHandler) Created(c *gin.Context, message string, data interfac
 	})
 }
 
+func (rh *responseHandler) Accepted(c *gin.Context, message string, data interface{}) {
+	c.JSON(http.StatusAccepted, Response{
+		Success: true,
+		Message: message,
+		Data:    data,
+	})
+}
+
 func (rh *responseHandler) Error(c *gin.Context, statusCode int, message string, err error) {
 	errorDetails := ""
 	if rh.debug && err != nil {
@@ -72,6 +82,10 @@ func (rh *responseHandler) Unauthorized(c *gin.Context, message string, err erro
 
 func (rh *responseHandler) Forbidden(c *gin.Context, message string, err error) {
 	rh.Error(c, http.StatusForbidden, message, err)
+}
+
+func (rh *responseHandler) Conflict(c *gin.Context, message string, err error) {
+	rh.Error(c, http.StatusConflict, message, err)
 }
 
 func (rh *responseHandler) NotFound(c *gin.Context, message string, err error) {

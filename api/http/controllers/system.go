@@ -52,7 +52,7 @@ func (h *Handler) ListAllPipelines(c *gin.Context) {
 			summary := dto.PipelineStepSummary{
 				Index:       i,
 				Type:        step.Type(),
-				TriggerWhen: step.Trigger(),
+				TriggerWhen: append([]string(nil), step.TriggerKinds()...),
 				Config:      pipelineStepDefinition(step),
 			}
 			if targeted, ok := step.(interface{ TargetInstance() string }); ok {
@@ -90,8 +90,8 @@ func (h *Handler) ListAllPipelines(c *gin.Context) {
 // Secret and webhook placeholders remain untouched and are never resolved here.
 func pipelineStepDefinition(step pipelineSteps.Step) map[string]any {
 	config := make(map[string]any)
-	if triggerWhen := step.Trigger(); triggerWhen != "" {
-		config["trigger_when"] = triggerWhen
+	if triggerKinds := step.TriggerKinds(); len(triggerKinds) > 0 {
+		config["trigger_when"] = append([]string(nil), triggerKinds...)
 	}
 
 	switch typed := step.(type) {

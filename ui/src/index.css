@@ -301,6 +301,53 @@ button:not(:disabled),
   }
 }
 
+@keyframes dialog-overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialog-overlay-exit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dialog-content-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px)) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes dialog-content-exit {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px)) scale(0.985);
+  }
+}
+
+@keyframes value-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dialog-content {
+  transform: translate(-50%, -50%);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .route-transition {
     animation: route-enter 280ms cubic-bezier(.2, .8, .2, 1) both;
@@ -323,6 +370,26 @@ button:not(:disabled),
   .reveal-rows > tr:nth-child(4) { animation-delay: 75ms; }
   .reveal-rows > tr:nth-child(5) { animation-delay: 100ms; }
   .reveal-rows > tr:nth-child(n+6) { animation-delay: 125ms; }
+
+  .dialog-overlay[data-state="open"] {
+    animation: dialog-overlay-enter 180ms ease-out both;
+  }
+
+  .dialog-overlay[data-state="closed"] {
+    animation: dialog-overlay-exit 140ms ease-in both;
+  }
+
+  .dialog-content[data-state="open"] {
+    animation: dialog-content-enter 220ms cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  .dialog-content[data-state="closed"] {
+    animation: dialog-content-exit 150ms ease-in both;
+  }
+
+  .value-row-enter {
+    animation: value-row-enter 180ms cubic-bezier(.2, .8, .2, 1) both;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

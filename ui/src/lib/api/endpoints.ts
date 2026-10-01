@@ -6,6 +6,8 @@ import type {
   LoginInput,
   PipelineRun,
   PipelineSummary,
+  StartPipelineRunData,
+  StartPipelineRunInput,
   SecretInput,
   SecretSummary,
   TargetSummary,
@@ -38,6 +40,12 @@ export const api = {
     )
     return runs[0]
   },
+
+  startPipelineRun: (pipeline: string, input: StartPipelineRunInput) =>
+    apiRequest<StartPipelineRunData>(`/admin/pipeline/${encodeURIComponent(pipeline)}/run`, {
+      method: "POST",
+      body: input,
+    }),
 
   webhooks: (pipeline?: string) =>
     apiRequest<Webhook[]>(pipeline ? `/hook/${encodeURIComponent(pipeline)}` : "/hook"),

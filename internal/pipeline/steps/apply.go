@@ -3,7 +3,7 @@ package pipelineSteps
 import "context"
 
 type ApplyStep struct {
-	TriggerWhen string   `yaml:"trigger_when,omitempty"`
+	TriggerWhen []string `yaml:"trigger_when,omitempty"`
 	Target      string   `yaml:"target"` // [TODO]: change this to pointer if needed
 	Files       []string `yaml:"files"`
 }
@@ -12,7 +12,7 @@ func (*ApplyStep) Type() string {
 	return ApplyType
 }
 
-func (as *ApplyStep) Trigger() string {
+func (as *ApplyStep) TriggerKinds() []string {
 	return as.TriggerWhen
 }
 

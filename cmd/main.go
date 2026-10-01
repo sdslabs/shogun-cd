@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	api "github.com/kunalvirwal/shogun-cd/api/http"
 	"github.com/kunalvirwal/shogun-cd/internal/app"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
@@ -17,11 +20,13 @@ import (
 )
 
 func main() {
-	initServices()
-	// pipeline.LoadPipeline("./examples/pipeline.yaml")
+	if err := initServices(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
-func initServices() {
+func initServices() error {
 
 	// Initialize logger
 	logger := utils.NewLogger(utils.DebugLevel, true)
@@ -29,22 +34,19 @@ func initServices() {
 	// Load configurations
 	cfg, err := config.LoadConfigs(logger)
 	if err != nil {
-		logger.LogNewError("Invalid config: Stopping Shogun...")
-		return
+		return fmt.Errorf("invalid config: %w", err)
 	}
 
 	logger.SetLevel(cfg.Debug)
 
 	db, err := store.Connect(cfg, logger)
 	if err != nil {
-		logger.LogNewError(err.Error())
-		return
+		return fmt.Errorf("connect to database: %w", err)
 	}
 	store := store.NewStore(cfg, db)
 	encryption, err := encryption.NewService(cfg, logger)
 	if err != nil {
-		logger.LogNewError("Unable to Initialise Encryption service : %v", err.Error())
-		return
+		return fmt.Errorf("initialize encryption service: %w", err)
 	}
 
 	// Initialize Secret Manager
@@ -56,7 +58,7 @@ func initServices() {
 	// Initialize Git service
 	gitService, err := git.NewGitService(logger, cfg)
 	if err != nil {
-		logger.LogNewError("Unable to initialize Git service: Stopping Shogun...")
+		return fmt.Errorf("initialize Git service: %w", err)
 	}
 
 	// Initialize Pipeline service
@@ -74,8 +76,7 @@ func initServices() {
 	_ = app
 
 	if err := seedAdmin(userService, cfg); err != nil {
-		logger.LogNewError("Unable to Seed Admin account : %v", err.Error())
-		return
+		return fmt.Errorf("seed admin account: %w", err)
 	}
 
 	// Initialize webhook service
@@ -88,4 +89,5 @@ func initServices() {
 	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService, store, orch)
 
 	<-make(chan struct{}) // Block forever
+	return nil
 }
