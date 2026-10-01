@@ -44,7 +44,7 @@ func (s *Service) Resolve(ctx context.Context, slug string, headers http.Header,
 
 	p := hook.Pipeline
 	s.logger.LogInfo("Webhook triggers pipeline : %v", p)
-	if err := s.orchestrator.RunPipeline(p, pipeline.WebhookTriggerKind, vals); err != nil {
+	if _, err := s.orchestrator.RunPipeline(ctx, p, pipeline.WebhookTriggerKind, vals); err != nil {
 		s.logger.LogError(err)
 		return nil, err
 	}
