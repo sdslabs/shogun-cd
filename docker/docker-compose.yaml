@@ -37,12 +37,12 @@ services:
   ui:
     image: devyarustagi/shogun-ui:latest
     ports:
-      - "8080:8080"
+      - "7006:7006"
     depends_on:
-     - shogun
+      - shogun
     environment:
-     - SHOGUN_HOST=${SHOGUN_HOST}
-     - SHOGUN_PORT=${SHOGUN_PORT}
+      - SHOGUN_HOST=${SHOGUN_HOST}
+      - SHOGUN_PORT=${SHOGUN_PORT}
     restart: unless-stopped
     logging: *default-logging
 
