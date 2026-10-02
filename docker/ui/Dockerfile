@@ -16,6 +16,6 @@ COPY --from=builder /build/dist /usr/share/nginx/html
 
 COPY docker/ui/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
-EXPOSE 8080
+EXPOSE 7006
 
 CMD ["nginx", "-g", "daemon off;"]
