@@ -68,7 +68,7 @@ type KeyPair struct {
 	PublicPath  string // Path to the public key file wrt the clone directory
 }
 
-func NewGitService(logger utils.Logger, Config *config.Config) (GitService, error) {
+func NewGitService(logger utils.Logger, cfg *config.Config) (GitService, error) {
 
 	gitPath, err := exec.LookPath("git")
 	if err != nil {
@@ -77,15 +77,15 @@ func NewGitService(logger utils.Logger, Config *config.Config) (GitService, erro
 	}
 	logger.Log("Git executable found at: %s", gitPath)
 
-	if Config.DataDir == "" {
-		Config.DataDir = defaultDataDir
+	if cfg.DataDir == "" {
+		cfg.DataDir = defaultDataDir
 	}
 
-	Config.GitConfig.Repo = strings.TrimSpace(Config.GitConfig.Repo)
+	cfg.GitConfig.Repo = strings.TrimSpace(cfg.GitConfig.Repo)
 
-	useKeys := Config.GitConfig.CreateDeployKey
-	gitURL := strings.HasPrefix(Config.GitConfig.Repo, "git@") || strings.HasPrefix(Config.GitConfig.Repo, "ssh://")
-	httpURL := strings.HasPrefix(Config.GitConfig.Repo, "http://") || strings.HasPrefix(Config.GitConfig.Repo, "https://")
+	useKeys := cfg.GitConfig.CreateDeployKey
+	gitURL := strings.HasPrefix(cfg.GitConfig.Repo, "git@") || strings.HasPrefix(cfg.GitConfig.Repo, "ssh://")
+	httpURL := strings.HasPrefix(cfg.GitConfig.Repo, "http://") || strings.HasPrefix(cfg.GitConfig.Repo, "https://")
 	// if deploy keys enabled, must be SSH
 	if useKeys && !gitURL {
 		logger.LogNewError("To allow Yaml mutations, deploy key creation must be enabled with SSH based repo URLs")
@@ -93,17 +93,17 @@ func NewGitService(logger utils.Logger, Config *config.Config) (GitService, erro
 	}
 	// neither ssh nor HTTP
 	if !gitURL && !httpURL {
-		logger.LogNewError("Unsupported git repo URL format: %s", Config.GitConfig.Repo)
+		logger.LogNewError("Unsupported git repo URL format: %s", cfg.GitConfig.Repo)
 		return nil, fmt.Errorf("Unsupported git repo URL format")
 	}
 
 	gitSvc := &Service{
 		logger:          logger,
-		pollingInterval: Config.GitConfig.PollingInterval,
+		pollingInterval: cfg.GitConfig.PollingInterval,
 		repo: Repo{
-			URL:        Config.GitConfig.Repo,
-			Branch:     Config.GitConfig.Branch,
-			CloneDir:   filepath.Join(Config.DataDir, cloneSubDir),
+			URL:        cfg.GitConfig.Repo,
+			Branch:     cfg.GitConfig.Branch,
+			CloneDir:   filepath.Join(cfg.DataDir, cloneSubDir),
 			DeployKeys: nil,
 		},
 		gitPath:        gitPath,
@@ -111,7 +111,7 @@ func NewGitService(logger utils.Logger, Config *config.Config) (GitService, erro
 	}
 
 	if useKeys {
-		if err := gitSvc.CreateAndAddDeployKey(filepath.Join(Config.DataDir, keyDir)); err != nil {
+		if err := gitSvc.CreateAndAddDeployKey(filepath.Join(cfg.DataDir, keyDir)); err != nil {
 			return nil, err
 		}
 	}
