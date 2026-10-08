@@ -6,6 +6,7 @@ import (
 
 	"github.com/kunalvirwal/shogun-cd/internal/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type PipelineStore interface {
@@ -59,13 +60,46 @@ func newPipelineStore(db *gorm.DB) PipelineStore {
 	}
 }
 
+// CreatePipelineRun persists a new run for the given pipeline. The pipeline row
+// is created on demand, then locked by the counter update so concurrent runs of
+// the same pipeline cannot allocate the same run number. Both statements share
+// one transaction with the insert, so a failed insert cannot consume a number
+// and the pipeline_runs.pipeline foreign key always finds its parent row.
 func (p *pipelineStore) CreatePipelineRun(ctx context.Context, in *models.PipelineRun) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
-	return gorm.G[models.PipelineRun](p.db).
-		Create(ctx, in)
+	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Ensure the pipeline exists.
+		if err := gorm.G[models.Pipeline](tx, clause.OnConflict{DoNothing: true}).
+			Create(ctx, &models.Pipeline{
+				Name: in.Pipeline,
+			}); err != nil {
+			return err
+		}
+
+		// Lock this pipeline row so concurrent runs cannot
+		// allocate the same run number.
+		pipeline, err := gorm.G[models.Pipeline](tx, clause.Locking{Strength: "UPDATE"}).
+			Where(&models.Pipeline{Name: in.Pipeline}).
+			First(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Allocate the current number, then advance the counter.
+		in.RunNumber = pipeline.NextRunNumber
+
+		if _, err := gorm.G[models.Pipeline](tx).
+			Where(&models.Pipeline{Name: in.Pipeline}).
+			Update(ctx, models.PipelineColNextRunNumber, pipeline.NextRunNumber+1); err != nil {
+			return err
+		}
+
+		return gorm.G[models.PipelineRun](tx).
+			Create(ctx, in)
+	})
 }
 
 func (p *pipelineStore) UpdatePipelineRun(ctx context.Context, in *models.PipelineRun) error {
@@ -129,7 +163,7 @@ func (p *pipelineStore) FetchPipelineRunDetails(ctx context.Context, pipeline st
 			return nil
 		}).
 		Where(&filter).
-		Order(fmt.Sprintf("%v desc", models.PipelineRunStepColStartedAt)).
+		Order(fmt.Sprintf("%v desc", models.PipelineRunColStartedAt)).
 		Find(ctx)
 
 	if err != nil {
