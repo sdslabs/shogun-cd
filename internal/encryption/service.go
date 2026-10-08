@@ -18,7 +18,7 @@ type EncryptionService interface {
 
 const (
 	iterations = 600000
-	keyLen     = 32 // 32bytes requires for aes256
+	keyLen     = 32 // 32 bytes required for aes256
 )
 
 var (

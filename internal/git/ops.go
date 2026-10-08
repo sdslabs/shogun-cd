@@ -15,7 +15,7 @@ const (
 
 // Clones the repo and retries until it succeeds
 func (s *Service) Clone(ctx context.Context) {
-	// Lock repo because CloneRepo assumes exclusive access
+	// Lock repo because cloneRepo assumes exclusive access
 	s.repo.mu.Lock()
 	for {
 		err := s.cloneRepo(ctx)
