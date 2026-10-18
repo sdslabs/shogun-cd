@@ -1,7 +1,7 @@
 # Shogun Webhook action
 
 Trigger a Shogun-CD pipeline from another repository's GitHub Actions workflow.
-The action signs the exact payload bytes using HMAC-SHA256 and sends one POST
+The action converts the payload to JSON, signs those bytes using HMAC-SHA256, and sends one POST
 request with an `X-Shogun-HMAC: sha256=<hex>` header.
 
 Create an active webhook for a pipeline declaring `ci_webhook`, then save its
@@ -20,7 +20,9 @@ jobs:
         with:
           url: https://shogun.example.com/api/hook/<slug>
           secret: ${{ secrets.SHOGUN_HMAC_SECRET }}
-          payload: '{"IMAGE_TAG": "${{ github.sha }}"}'
+          payload: |
+            IMAGE_TAG: ${{ github.sha }}
+            BRANCH: ${{ github.ref_name }}
 ```
 
 No checkout or GitHub token permission is required by this action. The runner
@@ -33,16 +35,21 @@ Always use the public webhook URL in the format `https://<host>/api/hook/<slug>`
 | --- | --- | --- | --- |
 | `url` | Yes | — | Full webhook URL in the format `https://<host>/api/hook/<slug>`. |
 | `secret` | Yes | — | Webhook secret shown when the webhook was created. Pass it from GitHub secrets. |
-| `payload` | No | `{}` | Flat JSON object whose values are strings, used as pipeline trigger values. An explicit empty string is invalid. |
+| `payload` | No | Empty | One `KEY: value` pair per line, used as pipeline trigger values. Omit when no values are needed. |
 | `curl-timeout` | No | `30` | Positive request timeout in seconds; decimals are supported. An empty string uses 30. |
 
-Payload bytes are signed and sent without JSON reformatting. To include arbitrary
-strings, serialize them with `toJSON` rather than interpolating them into quoted
-JSON yourself. For example:
+Use `payload: |` for simple key-value lines, without `-` list markers. Keys must
+start with a letter or underscore and contain only letters, digits, or underscores.
+The first colon separates the key from the value, so URLs and image tags work.
+Blank lines are ignored; surrounding whitespace is trimmed. Values such as `true`
+and `123` remain strings. Duplicate keys are rejected.
 
-```yaml
-payload: '{"IMAGE_TAG": ${{ toJSON(github.sha) }}, "BRANCH": ${{ toJSON(github.ref_name) }}}'
-```
+This is a simple line format, not full YAML: quotes, `#`, and backslashes in values
+are literal text. Do not add quotes around values. Each value must fit on one line;
+raw JSON payloads and `-` lists are not accepted.
+
+The action handles JSON encoding and escaping internally before signing and
+sending. An omitted, empty, or whitespace-only `payload` sends an empty object.
 
 ## Outputs and success
 
@@ -61,7 +68,7 @@ Responses are printed as text with GitHub workflow-command processing disabled.
 
 ## Runner dependencies
 
-The action requires Bash, curl, OpenSSL, awk, tr, mktemp, and rm. It is intended
+The action requires Bash, curl, OpenSSL, jq, awk, tr, mktemp, and rm. It is intended
 for Ubuntu GitHub-hosted runners and Linux self-hosted runners. On runners with
 `apt-get` or `apk`, missing tools are installed automatically using root or
 passwordless sudo. Command names are mapped to their packages (`gawk` and

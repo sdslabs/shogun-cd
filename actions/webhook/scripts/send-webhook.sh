@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${SHOGUN_WEBHOOK_URL:?SHOGUN_WEBHOOK_URL is required}"
 : "${SHOGUN_SECRET:?SHOGUN_SECRET is required}"
-: "${SHOGUN_PAYLOAD:?SHOGUN_PAYLOAD is required}"
+SHOGUN_PAYLOAD="${SHOGUN_PAYLOAD:-}"
 : "${GITHUB_OUTPUT:?GITHUB_OUTPUT is required}"
 # Covers an explicit empty curl-timeout from the action and standalone runs.
 SHOGUN_TIMEOUT="${SHOGUN_TIMEOUT:-30}"
@@ -19,8 +19,30 @@ case "$SHOGUN_WEBHOOK_URL" in
     ;;
 esac
 
+# Convert KEY: value lines to JSON. Serialize once so the
+# signature and request always use identical bytes, including escaped values.
+if ! payload=$(printf '%s' "$SHOGUN_PAYLOAD" | jq --raw-input --slurp --compact-output '
+  reduce (split("\n")[] | select(test("\\S"))) as $line ({};
+      ($line | index(":")) as $separator |
+      if $separator == null then
+        error("Each payload line must use KEY: value")
+      else
+        ($line[:$separator] | gsub("^\\s+|\\s+$"; "")) as $key |
+        ($line[$separator + 1:] | gsub("^\\s+|\\s+$"; "")) as $value |
+        if ($key | test("^[A-Za-z_][A-Za-z0-9_]*$")) == false then
+          error("Payload keys must be variable names, without list markers")
+        elif has($key) then
+          error("Payload contains a duplicate key")
+        else .[$key] = $value end
+      end
+  )
+'); then
+  echo '::error::Invalid inputs.payload; use one KEY: value pair per line'
+  exit 1
+fi
+
 # HMAC-SHA256 over the exact bytes that curl will send, hex, lowercase.
-signature=$(printf '%s' "$SHOGUN_PAYLOAD" \
+signature=$(printf '%s' "$payload" \
   | openssl dgst -sha256 -hmac "$SHOGUN_SECRET" \
   | awk '{print $NF}')
 signature=$(printf '%s' "$signature" | tr '[:upper:]' '[:lower:]')
@@ -38,7 +60,7 @@ status=$(curl --disable --silent --show-error \
   --request POST "$SHOGUN_WEBHOOK_URL" \
   --header 'Content-Type: application/json' \
   --header "X-Shogun-HMAC: sha256=$signature" \
-  --data-raw "$SHOGUN_PAYLOAD") || curl_exit=$?
+  --data-raw "$payload") || curl_exit=$?
 status="${status:-000}"
 
 response=$(<"$body_file")

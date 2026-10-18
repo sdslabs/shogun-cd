@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-required_tools=(curl openssl awk tr mktemp rm)
+required_tools=(curl openssl jq awk tr mktemp rm)
 missing_tools=()
 
 for tool in "${required_tools[@]}"; do

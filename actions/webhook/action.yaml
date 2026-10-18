@@ -10,9 +10,9 @@ inputs:
     description: The webhook secret shown once at creation time. Composite actions cannot read the secrets context, so pass secrets.SHOGUN_HMAC_SECRET here.
     required: true
   payload:
-    description: Flat JSON object with string values, sent verbatim as the request body and used for {{VAR}} interpolation in pipeline steps.
+    description: 'One KEY: value pair per line, used for {{VAR}} interpolation in pipeline steps. Omit when no values are needed.'
     required: false
-    default: '{}'
+    default: ''
   # A default only applies when the input is omitted, an explicit empty string still reaches
   # the script, which is why send-webhook.sh keeps its own ${SHOGUN_TIMEOUT:-30} fallback.
   curl-timeout:
@@ -36,7 +36,6 @@ runs:
       env:
         SHOGUN_WEBHOOK_URL: ${{ inputs.url }}
         SHOGUN_SECRET: ${{ inputs.secret }}
-        SHOGUN_PAYLOAD: ${{ inputs.payload }}
       run: |
         set -euo pipefail
 
@@ -46,10 +45,6 @@ runs:
         fi
         if [ -z "$SHOGUN_SECRET" ]; then
           echo "::error::inputs.secret is required"
-          exit 1
-        fi
-        if [ -z "$SHOGUN_PAYLOAD" ]; then
-          echo "::error::inputs.payload must not be empty, the API requires a JSON body"
           exit 1
         fi
 
