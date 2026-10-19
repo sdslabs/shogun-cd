@@ -7,9 +7,9 @@ import (
 )
 
 type Responder interface {
-	Success(c *gin.Context, message string, data interface{})
-	Created(c *gin.Context, message string, data interface{})
-	Accepted(c *gin.Context, message string, data interface{})
+	Success(c *gin.Context, message string, data any)
+	Created(c *gin.Context, message string, data any)
+	Accepted(c *gin.Context, message string, data any)
 	Error(c *gin.Context, statusCode int, message string, err error)
 	BadRequest(c *gin.Context, message string, err error)
 	Unauthorized(c *gin.Context, message string, err error)
@@ -30,13 +30,13 @@ func NewResponder(debug bool) *responseHandler {
 }
 
 type Response struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
-func (rh *responseHandler) Success(c *gin.Context, message string, data interface{}) {
+func (rh *responseHandler) Success(c *gin.Context, message string, data any) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: message,
@@ -44,7 +44,7 @@ func (rh *responseHandler) Success(c *gin.Context, message string, data interfac
 	})
 }
 
-func (rh *responseHandler) Created(c *gin.Context, message string, data interface{}) {
+func (rh *responseHandler) Created(c *gin.Context, message string, data any) {
 	c.JSON(http.StatusCreated, Response{
 		Success: true,
 		Message: message,
@@ -52,7 +52,7 @@ func (rh *responseHandler) Created(c *gin.Context, message string, data interfac
 	})
 }
 
-func (rh *responseHandler) Accepted(c *gin.Context, message string, data interface{}) {
+func (rh *responseHandler) Accepted(c *gin.Context, message string, data any) {
 	c.JSON(http.StatusAccepted, Response{
 		Success: true,
 		Message: message,

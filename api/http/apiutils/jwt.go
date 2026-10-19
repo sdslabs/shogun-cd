@@ -31,7 +31,7 @@ func GenerateToken(email string, role string, secret string, expiry int) (string
 
 func ParseToken(tokenString string, secret string) (*Claims, error) {
 
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}

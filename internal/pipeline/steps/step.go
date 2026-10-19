@@ -75,13 +75,13 @@ func (sw *StepWrapper) UnmarshalYAML(node *yaml.Node) error {
 // MarshalYAML is an interface hook for custom marshaling of StepWrapper
 // This function name must be exactly "MarshalYAML" to be recognized by the YAML package
 // Currently MarshalYAML is not used anywhere in the codebase, but is added for the sake of completeness
-func (sw StepWrapper) MarshalYAML() (interface{}, error) {
+func (sw StepWrapper) MarshalYAML() (any, error) {
 	if sw.Step == nil {
 		return nil, fmt.Errorf("cannot marshal nil step")
 	}
 
 	// Return map with step type as key
-	return map[string]interface{}{
+	return map[string]any{
 		sw.Step.Type(): sw.Step,
 	}, nil
 }
