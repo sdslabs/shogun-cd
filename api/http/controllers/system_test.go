@@ -214,6 +214,9 @@ func (*systemTestPipelineStore) UpdatePipelineRunStep(context.Context, *models.P
 func (*systemTestPipelineStore) FetchPipelineRunDetails(context.Context, string, uint) ([]models.PipelineRun, error) {
 	return nil, nil
 }
+func (*systemTestPipelineStore) FetchPipelineRunParameters(context.Context, string, uint) (map[string]string, error) {
+	return nil, nil
+}
 func (s *systemTestPipelineStore) FetchLatestPipelineRuns(context.Context, []string) (map[string]*models.PipelineRun, error) {
 	return s.latest, nil
 }
