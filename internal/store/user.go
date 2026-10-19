@@ -25,7 +25,7 @@ func newUserStore(db *gorm.DB) UserStore {
 	}
 }
 
-// create a new user with the role 'admin'
+// create a new user with the role 'user'
 func (u *userStore) Create(ctx context.Context, in *models.User) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
