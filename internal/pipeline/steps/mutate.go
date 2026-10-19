@@ -50,13 +50,11 @@ func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) (string, erro
 			return deps.Logger.LogShogunError(output, "Failed to parse YAML file %s: %v", change.File, err)
 		}
 
-		change.Value = InterpolateVariables(change.Value, deps.TriggerValues)
-		change.Value, err = deps.SecretService.ResolveSecrets(ctx, change.Value)
+		change.Value, err = deps.ResolveString(ctx, change.Value)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.Value, err)
 		}
-		change.UpdateField = InterpolateVariables(change.UpdateField, deps.TriggerValues)
-		change.UpdateField, err = deps.SecretService.ResolveSecrets(ctx, change.UpdateField)
+		change.UpdateField, err = deps.ResolveString(ctx, change.UpdateField)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.UpdateField, err)
 		}

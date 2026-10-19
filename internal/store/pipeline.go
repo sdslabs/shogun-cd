@@ -2,10 +2,12 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/kunalvirwal/shogun-cd/internal/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type PipelineStore interface {
@@ -15,7 +17,13 @@ type PipelineStore interface {
 	UpdatePipelineRunStep(ctx context.Context, in *models.PipelineRunStep) error
 	FetchPipelineRunDetails(ctx context.Context, pipeline string, runID uint) ([]models.PipelineRun, error)
 	FetchLatestPipelineRuns(ctx context.Context, pipelines []string) (map[string]*models.PipelineRun, error)
+	FetchPipelineRunParameters(ctx context.Context, pipeline string, runID uint) (map[string]string, error)
 }
+
+const (
+	runLabelPrefix = "RUN"
+	runNumberLabel = "RUN_NUMBER"
+)
 
 // FetchLatestPipelineRuns returns at most one run per pipeline. Run IDs are
 // monotonically increasing, so selecting the greatest ID per pipeline gives
@@ -64,8 +72,31 @@ func (p *pipelineStore) CreatePipelineRun(ctx context.Context, in *models.Pipeli
 		return ctx.Err()
 	}
 
-	return gorm.G[models.PipelineRun](p.db).
-		Create(ctx, in)
+	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// pipeline exists
+		if err := gorm.G[models.Pipeline](tx, clause.OnConflict{DoNothing: true}).
+			Create(ctx, &models.Pipeline{Name: in.Pipeline}); err != nil {
+			return err
+		}
+
+		// lock the row for race conditions
+		pipeline, err := gorm.G[models.Pipeline](tx, clause.Locking{Strength: "UPDATE"}).
+			Where(&models.Pipeline{Name: in.Pipeline}).
+			First(ctx)
+		if err != nil {
+			return err
+		}
+
+		in.RunNumber = pipeline.NextRunNumber
+
+		if _, err := gorm.G[models.Pipeline](tx).
+			Where(&models.Pipeline{Name: in.Pipeline}).
+			Update(ctx, models.PipelineColNextRunNumber, pipeline.NextRunNumber+1); err != nil {
+			return err
+		}
+
+		return gorm.G[models.PipelineRun](tx).Create(ctx, in)
+	})
 }
 
 func (p *pipelineStore) UpdatePipelineRun(ctx context.Context, in *models.PipelineRun) error {
@@ -129,7 +160,7 @@ func (p *pipelineStore) FetchPipelineRunDetails(ctx context.Context, pipeline st
 			return nil
 		}).
 		Where(&filter).
-		Order(fmt.Sprintf("%v desc", models.PipelineRunStepColStartedAt)).
+		Order(fmt.Sprintf("%v desc", models.PipelineRunColStartedAt)).
 		Find(ctx)
 
 	if err != nil {
@@ -141,4 +172,25 @@ func (p *pipelineStore) FetchPipelineRunDetails(ctx context.Context, pipeline st
 	}
 
 	return runs, nil
+}
+
+func (p *pipelineStore) FetchPipelineRunParameters(ctx context.Context, pipeline string, runID uint) (map[string]string, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	run, err := gorm.G[models.PipelineRun](p.db).
+		Select(models.PipelineRunColRunNumber).
+		Where(&models.PipelineRun{Pipeline: pipeline, ID: runID}).
+		Take(ctx)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrRecordNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		fmt.Sprintf("%s.%s", runLabelPrefix, runNumberLabel): fmt.Sprint(run.RunNumber),
+	}, nil
 }

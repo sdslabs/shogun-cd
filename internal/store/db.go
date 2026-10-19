@@ -41,6 +41,7 @@ func Connect(cfg *config.Config, logger utils.Logger) (*gorm.DB, error) {
 		&models.User{},
 		&models.Webhook{},
 		&models.Secret{},
+		&models.Pipeline{},
 		&models.PipelineRun{},
 		&models.PipelineRunStep{},
 	)
