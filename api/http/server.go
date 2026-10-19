@@ -18,20 +18,20 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
-func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) {
+func StartAPIServer(logger utils.Logger, debug bool, cfg config.Api, w webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) {
 	r := newRouter()
 
-	responder := response.NewResponder(cfg.Debug)
+	responder := response.NewResponder(debug)
 	m := middlewares.NewManager(logger, cfg, responder, w)
 	h := controllers.NewHandler(logger, cfg, responder, w, u, secrets, store, orch)
 
 	initRoutes(r, m, h)
 
-	if cfg.ApiConfig.EnableSpec {
+	if cfg.EnableSpec {
 		docs.Serve(r)
 	}
 
-	if err := r.Run(fmt.Sprintf(":%v", cfg.ApiConfig.Port)); err != nil {
+	if err := r.Run(fmt.Sprintf(":%v", cfg.Port)); err != nil {
 		logger.LogError(err)
 	}
 	// [TODO] implement server shutdown using context

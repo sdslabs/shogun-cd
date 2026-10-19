@@ -2,8 +2,6 @@ package store
 
 import (
 	"errors"
-
-	"github.com/kunalvirwal/shogun-cd/internal/config"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +16,7 @@ var (
 	ErrRecordNotFound = errors.New("record not found")
 )
 
-func NewStore(cfg *config.Config, db *gorm.DB) *Store {
+func NewStore(db *gorm.DB) *Store {
 	return &Store{
 		User:     newUserStore(db),
 		Webhook:  newWebhookStore(db),

@@ -12,14 +12,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func Connect(cfg *config.Config, logger utils.Logger) (*gorm.DB, error) {
+func Connect(cfg config.DB, logger utils.Logger) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
-		cfg.DBConfig.Host,
-		cfg.DBConfig.User,
-		cfg.DBConfig.Password,
-		cfg.DBConfig.DBName,
-		cfg.DBConfig.Port,
-		cfg.DBConfig.SSLMode,
+		cfg.Host, cfg.User, cfg.Password, cfg.DBName, cfg.Port, cfg.SSLMode,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{

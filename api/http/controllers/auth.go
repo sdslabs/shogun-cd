@@ -77,8 +77,8 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	role := user.Role
-	secret := h.config.ApiConfig.JWT.Secret
-	exp := h.config.ApiConfig.JWT.ExpirationHours
+	secret := h.config.JWT.Secret
+	exp := h.config.JWT.ExpirationHours
 
 	token, err := apiutils.GenerateToken(req.Email, role, secret, exp)
 	if err != nil {

@@ -9,11 +9,11 @@ import (
 )
 
 // makes the admin user upon startup (ignores if admin exists)
-func seedAdmin(u users.Service, cfg *config.Config) error {
+func seedAdmin(u users.Service, cfg config.Admin) error {
 	ctx := context.Background()
 	if err := u.Create(ctx, &users.CreateParams{
-		Email:    cfg.ApiConfig.Admin.Email,
-		Password: cfg.ApiConfig.Admin.Password,
+		Email:    cfg.Email,
+		Password: cfg.Password,
 	}); err != nil {
 		switch {
 		case errors.Is(err, users.ErrEmailTaken):
@@ -24,7 +24,7 @@ func seedAdmin(u users.Service, cfg *config.Config) error {
 		}
 	}
 
-	if err := u.MakeAdmin(ctx, cfg.ApiConfig.Admin.Email); err != nil {
+	if err := u.MakeAdmin(ctx, cfg.Email); err != nil {
 		return err
 	}
 

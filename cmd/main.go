@@ -39,11 +39,12 @@ func initServices() error {
 
 	logger.SetLevel(cfg.Debug)
 
-	db, err := store.Connect(cfg, logger)
+	db, err := store.Connect(cfg.DBConfig, logger)
 	if err != nil {
 		return fmt.Errorf("connect to database: %w", err)
 	}
-	store := store.NewStore(cfg, db)
+	store := store.NewStore(db)
+	// [TODO] clean the config passing for this service
 	encryption, err := encryption.NewService(cfg, logger)
 	if err != nil {
 		return fmt.Errorf("initialize encryption service: %w", err)
@@ -56,7 +57,7 @@ func initServices() error {
 	userService := users.NewUserService(store, logger)
 
 	// Initialize Git service
-	gitService, err := git.NewGitService(logger, cfg)
+	gitService, err := git.NewGitService(cfg.DataDir, cfg.GitConfig, logger)
 	if err != nil {
 		return fmt.Errorf("initialize Git service: %w", err)
 	}
@@ -75,7 +76,7 @@ func initServices() error {
 
 	_ = app
 
-	if err := seedAdmin(userService, cfg); err != nil {
+	if err := seedAdmin(userService, cfg.ApiConfig.Admin); err != nil {
 		return fmt.Errorf("seed admin account: %w", err)
 	}
 
@@ -86,7 +87,7 @@ func initServices() error {
 	}
 
 	// Initialize api
-	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService, store, orch)
+	go api.StartAPIServer(logger, cfg.Debug, cfg.ApiConfig, webhookService, userService, secretService, store, orch)
 
 	<-make(chan struct{}) // Block forever
 	return nil

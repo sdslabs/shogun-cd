@@ -2,9 +2,14 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"go.yaml.in/yaml/v3"
+)
+
+const (
+	defaultDataDir = "var/lib/shogun/"
 )
 
 func setConfigPath() string {
@@ -35,6 +40,11 @@ func LoadConfigs(l utils.Logger) (*Config, error) {
 	l.Log("Configs loaded successfully")
 
 	// [TODO] Validate config here if needed
+	if cfg.DataDir == "" {
+		cfg.DataDir = defaultDataDir
+	}
+	cfg.GitConfig.Repo = strings.TrimSpace(cfg.GitConfig.Repo)
+
 
 	return &cfg, nil
 }

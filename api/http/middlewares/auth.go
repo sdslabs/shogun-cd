@@ -25,7 +25,7 @@ func (m *Manager) AuthRequired(c *gin.Context) {
 	}
 
 	tokenString := parts[1]
-	claims, err := apiutils.ParseToken(tokenString, m.config.ApiConfig.JWT.Secret)
+	claims, err := apiutils.ParseToken(tokenString, m.config.JWT.Secret)
 	if err != nil {
 		m.response.Unauthorized(c, "Invalid or expired session", err)
 		c.Abort()
