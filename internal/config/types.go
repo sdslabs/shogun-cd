@@ -4,7 +4,7 @@ type Config struct {
 	Debug     bool   `yaml:"debug"`
 	DataDir   string `yaml:"data_dir"`
 	GitConfig Git    `yaml:"git"`
-	ApiConfig Api    `yaml:"api"`
+	APIConfig API    `yaml:"api"`
 	DBConfig  DB     `yaml:"database"`
 }
 
@@ -15,7 +15,7 @@ type Git struct {
 	PollingInterval int    `yaml:"polling_interval"`
 }
 
-type Api struct {
+type API struct {
 	Admin      Admin `yaml:"admin"`
 	Port       int   `yaml:"port"`
 	JWT        JWT   `yaml:"jwt"`

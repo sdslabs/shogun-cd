@@ -13,7 +13,7 @@ import (
 
 type Handler struct {
 	logger   utils.Logger
-	config   config.Api
+	config   config.API
 	response response.Responder
 	webhook  webhooks.WebhookService
 	user     users.Service
@@ -22,7 +22,7 @@ type Handler struct {
 	orch     orchestrator.Orchestrator
 }
 
-func NewHandler(l utils.Logger, cfg config.Api, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) *Handler {
+func NewHandler(l utils.Logger, cfg config.API, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) *Handler {
 	return &Handler{
 		logger:   l,
 		config:   cfg,

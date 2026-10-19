@@ -18,7 +18,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
 )
 
-func StartAPIServer(logger utils.Logger, debug bool, cfg config.Api, w webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) {
+func StartAPIServer(logger utils.Logger, debug bool, cfg config.API, w webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) {
 	r := newRouter()
 
 	responder := response.NewResponder(debug)

@@ -76,7 +76,7 @@ func initServices() error {
 
 	_ = app
 
-	if err := seedAdmin(userService, cfg.ApiConfig.Admin); err != nil {
+	if err := seedAdmin(userService, cfg.APIConfig.Admin); err != nil {
 		return fmt.Errorf("seed admin account: %w", err)
 	}
 
@@ -87,7 +87,7 @@ func initServices() error {
 	}
 
 	// Initialize api
-	go api.StartAPIServer(logger, cfg.Debug, cfg.ApiConfig, webhookService, userService, secretService, store, orch)
+	go api.StartAPIServer(logger, cfg.Debug, cfg.APIConfig, webhookService, userService, secretService, store, orch)
 
 	<-make(chan struct{}) // Block forever
 	return nil

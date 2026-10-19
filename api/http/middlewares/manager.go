@@ -9,12 +9,12 @@ import (
 
 type Manager struct {
 	logger   utils.Logger
-	config   config.Api
+	config   config.API
 	response response.Responder
 	webhook  webhooks.WebhookService
 }
 
-func NewManager(l utils.Logger, cfg config.Api, responder response.Responder, wh webhooks.WebhookService) *Manager {
+func NewManager(l utils.Logger, cfg config.API, responder response.Responder, wh webhooks.WebhookService) *Manager {
 	return &Manager{
 		logger:   l,
 		config:   cfg,
