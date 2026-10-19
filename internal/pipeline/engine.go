@@ -34,6 +34,12 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 		return false
 	}
 
+	runParameters, err := p.store.FetchPipelineRunParameters(ctx, pipeline.Metadata.Name, runID)
+	if err != nil {
+		p.logger.LogNewError("Failed to fetch parameters for pipeline run %d: %v", runID, err)
+		return false
+	}
+
 	deps := &pipelineSteps.StepDeps{
 		PipelineName:  pipeline.Metadata.Name,
 		Logger:        p.logger,
@@ -41,6 +47,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 		SecretService: p.secretService,
 		Targets:       targets,
 		TriggerValues: triggerValues,
+		RunParameters: runParameters,
 		SSHManager:    sshclient.NewSSHManager(),
 	}
 
