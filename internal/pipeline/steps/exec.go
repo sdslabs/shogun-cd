@@ -67,7 +67,11 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", cmd, err)
 		}
 
-		script.WriteString("echo \"" + prompt + " " + fmt.Sprint(i) + "\"")
+		script.WriteString("echo \"")
+		script.WriteString(prompt)
+		script.WriteString(" ")
+		fmt.Fprint(&script, i)
+		script.WriteString("\"")
 		script.WriteByte('\n')
 		script.WriteString(cmd)
 		script.WriteByte('\n')
