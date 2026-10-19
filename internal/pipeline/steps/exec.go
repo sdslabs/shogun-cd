@@ -61,8 +61,7 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	script.WriteString("set -eu\n")
 	for i, cmd := range es.Commands {
 
-		cmd = InterpolateVariables(cmd, deps.TriggerValues)
-		cmd, err = deps.SecretService.ResolveSecrets(ctx, cmd)
+		cmd, err = deps.ResolveString(ctx, cmd)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", cmd, err)
 		}

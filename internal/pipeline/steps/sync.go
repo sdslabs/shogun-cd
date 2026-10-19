@@ -70,13 +70,11 @@ func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	defer sftpclient.Close()
 
 	for _, file := range ss.Files {
-		src := InterpolateVariables(file.Src, deps.TriggerValues)
-		src, err = deps.SecretService.ResolveSecrets(ctx, src)
+		src, err := deps.ResolveString(ctx, file.Src)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for source path %s: %v", file.Src, err)
 		}
-		dst := InterpolateVariables(file.Dst, deps.TriggerValues)
-		dst, err = deps.SecretService.ResolveSecrets(ctx, dst)
+		dst, err := deps.ResolveString(ctx, file.Dst)
 		if err != nil {
 			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for destination path %s: %v", file.Dst, err)
 		}

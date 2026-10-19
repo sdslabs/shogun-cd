@@ -1,6 +1,7 @@
 package pipelineSteps
 
 import (
+	"context"
 	"regexp"
 	"strings"
 
@@ -20,12 +21,24 @@ type StepDeps struct {
 	SecretService secrets.SecretService
 	Targets       map[string]*target.Target
 	TriggerValues map[string]string
+	RunParameters map[string]string
 	SSHManager    sshclient.SSHManager
+}
+
+func (deps *StepDeps) ResolveString(ctx context.Context, input string) (string, error) {
+	input = InterpolateVariables(input, deps.TriggerValues)
+
+	resolved, err := deps.SecretService.ResolveSecrets(ctx, input)
+	if err != nil {
+		return "", err
+	}
+
+	return InterpolateVariables(resolved, deps.RunParameters), nil
 }
 
 // InterpolateVariables replaces {{...}} patterns in the input string with values from the variables map
 func InterpolateVariables(input string, variables map[string]string) string {
-	re := regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+	re := regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\}\}`)
 
 	return re.ReplaceAllStringFunc(input, func(match string) string {
 		// Extract the key from {{KEY}}
