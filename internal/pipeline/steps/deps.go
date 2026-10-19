@@ -11,6 +11,8 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 )
 
+var interpolateRegex = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+
 // StepDeps represents dependencies required by pipeline steps.
 type StepDeps struct {
 	// [TODO] Add SSH
@@ -23,11 +25,10 @@ type StepDeps struct {
 	SSHManager    sshclient.SSHManager
 }
 
+
 // InterpolateVariables replaces {{...}} patterns in the input string with values from the variables map
 func InterpolateVariables(input string, variables map[string]string) string {
-	re := regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
-
-	return re.ReplaceAllStringFunc(input, func(match string) string {
+	return interpolateRegex.ReplaceAllStringFunc(input, func(match string) string {
 		// Extract the key from {{KEY}}
 		key := strings.TrimSpace(match[2 : len(match)-2])
 

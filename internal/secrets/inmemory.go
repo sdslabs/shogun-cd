@@ -2,7 +2,6 @@ package secrets
 
 import (
 	"fmt"
-	"regexp"
 	"sync"
 )
 
@@ -56,7 +55,6 @@ func (s *InMemoryService) DeleteSecret(name string) {
 }
 
 func (s *InMemoryService) ResolveSecrets(input string) string {
-	var secretRegex = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
 	return secretRegex.ReplaceAllStringFunc(input, func(match string) string {
 		s.mu.Lock()
 		defer s.mu.Unlock()

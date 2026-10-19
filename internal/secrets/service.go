@@ -3,7 +3,6 @@ package secrets
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/kunalvirwal/shogun-cd/internal/encryption"
@@ -95,8 +94,6 @@ func (s *service) FetchSecret(ctx context.Context, name string) (string, error) 
 
 // takes a string as input and replaces the {{SECRET_NAME}} with its decrypted value as per the database.
 func (s *service) ResolveSecrets(ctx context.Context, input string) (string, error) {
-	var secretRegex = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
-
 	matches := secretRegex.FindAllStringSubmatch(input, -1)
 
 	output := input
