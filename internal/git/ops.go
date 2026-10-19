@@ -27,7 +27,7 @@ func (s *Service) Clone(ctx context.Context) {
 	}
 	err := s.setGHaccount()
 	if err != nil {
-		s.logger.LogNewError("Failed to set Github account: %v", err)
+		s.logger.LogNewError("failed to set github account: %v", err)
 	}
 	s.repo.mu.Unlock()
 }
@@ -54,7 +54,7 @@ func (s *Service) cloneRepo(ctx context.Context) error {
 			} else {
 				currentBranch, err := s.repo.ExecGitCommand(ctx, s.gitPath, "rev-parse", "--abbrev-ref", "HEAD")
 				if err != nil {
-					s.logger.LogNewError("Failed to get current branch: %v", err)
+					s.logger.LogNewError("failed to get current branch: %v", err)
 					s.ClearCacheDir()
 				} else {
 
@@ -62,12 +62,12 @@ func (s *Service) cloneRepo(ctx context.Context) error {
 					if branch != s.repo.Branch {
 						s.logger.Log("Branch mismatch. Expected: %s, Got: %s. Checking out correct branch...", s.repo.Branch, branch)
 						if _, err := s.repo.ExecGitCommand(ctx, s.gitPath, "fetch", "origin"); err != nil {
-							s.logger.LogNewError("Failed to fetch from origin: %v", err)
+							s.logger.LogNewError("failed to fetch from origin: %v", err)
 							s.ClearCacheDir()
 							return err
 						}
 						if _, err := s.repo.ExecGitCommand(ctx, s.gitPath, "checkout", "-B", s.repo.Branch, "origin/"+s.repo.Branch); err != nil {
-							s.logger.LogNewError("Failed to checkout branch: %v", err)
+							s.logger.LogNewError("failed to checkout branch: %v", err)
 							s.ClearCacheDir()
 							return err
 						}
@@ -75,7 +75,7 @@ func (s *Service) cloneRepo(ctx context.Context) error {
 					}
 					_, err := s.repo.ExecGitCommand(ctx, s.gitPath, "reset", "--hard", "origin/"+s.repo.Branch)
 					if err != nil {
-						s.logger.LogNewError("Failed to pull from origin: %v", err)
+						s.logger.LogNewError("failed to pull from origin: %v", err)
 						s.ClearCacheDir()
 						return err
 					}
@@ -90,7 +90,7 @@ func (s *Service) cloneRepo(ctx context.Context) error {
 	s.logger.LogInfo("Cloning git repository: %s branch: %s to dir: %s", s.repo.URL, s.repo.Branch, s.repo.CloneDir)
 	output, err := s.repo.ExecGitCommand(ctx, s.gitPath, "clone", "-b", s.repo.Branch, s.repo.URL, s.repo.CloneDir)
 	if err != nil {
-		s.logger.LogNewError("Git clone failed: %v", err)
+		s.logger.LogNewError("git clone failed: %v", err)
 		if len(output) > 0 {
 			s.logger.Log("Git output: %s", string(output))
 		}
@@ -109,13 +109,13 @@ func (s *Service) setGHaccount() error {
 
 	_, err := s.repo.ExecGitCommand(context.Background(), s.gitPath, "config", "user.name", GHusername)
 	if err != nil {
-		s.logger.LogNewError("Failed to set git username: %v", err)
+		s.logger.LogNewError("failed to set git username: %v", err)
 		return err
 	}
 
 	_, err = s.repo.ExecGitCommand(context.Background(), s.gitPath, "config", "user.email", GHemail)
 	if err != nil {
-		s.logger.LogNewError("Failed to set git email: %v", err)
+		s.logger.LogNewError("failed to set git email: %v", err)
 		return err
 	}
 
@@ -125,7 +125,7 @@ func (s *Service) setGHaccount() error {
 
 func (s *Service) ClearCacheDir() error {
 	if err := os.RemoveAll(s.repo.CloneDir); err != nil {
-		s.logger.LogNewError("Failed to remove directory: %v", err)
+		s.logger.LogNewError("failed to remove directory: %v", err)
 		return err
 	}
 	return nil
@@ -143,19 +143,19 @@ func (s *Service) Pull(ctx context.Context) error {
 
 		s.logger.Log("Fetching repo changes...")
 		if _, err := s.repo.ExecGitCommand(ctx, s.gitPath, "fetch", "origin"); err != nil {
-			s.logger.LogNewError("Failed to fetch from origin: %v", err)
+			s.logger.LogNewError("failed to fetch from origin: %v", err)
 			return nil, err
 		}
 
 		oldHEAD, err := s.repo.ExecGitCommand(ctx, s.gitPath, "rev-parse", "HEAD")
 		if err != nil {
-			s.logger.LogNewError("Failed to get current HEAD: %v", err)
+			s.logger.LogNewError("failed to get current head: %v", err)
 			return nil, err
 		}
 
 		out, err := s.repo.ExecGitCommand(ctx, s.gitPath, "rev-list", "--count", "HEAD...origin/"+s.repo.Branch)
 		if err != nil {
-			s.logger.LogNewError("Failed to check for new commits: %v", err)
+			s.logger.LogNewError("failed to check for new commits: %v", err)
 			return nil, err
 		}
 
@@ -168,7 +168,7 @@ func (s *Service) Pull(ctx context.Context) error {
 
 		output, err := s.repo.ExecGitCommand(ctx, s.gitPath, "reset", "--hard", "origin/"+s.repo.Branch)
 		if err != nil {
-			s.logger.LogNewError("Failed to pull from origin: %v", err)
+			s.logger.LogNewError("failed to pull from origin: %v", err)
 			return nil, err
 		}
 
@@ -180,7 +180,7 @@ func (s *Service) Pull(ctx context.Context) error {
 		fileDiffs := []string{}
 		diffs, err := s.repo.ExecGitCommand(ctx, s.gitPath, "diff", "--name-only", strings.TrimSpace(string(oldHEAD)), "HEAD")
 		if err != nil {
-			s.logger.LogNewError("Failed to get file diffs: %v", err)
+			s.logger.LogNewError("failed to get file diffs: %v", err)
 			return nil, err
 		}
 		s.logger.Log("Files changed:\n%s", string(diffs))
@@ -194,7 +194,7 @@ func (s *Service) Pull(ctx context.Context) error {
 		select {
 		case s.pullEventsChan <- fileDiffs:
 		default:
-			s.logger.LogNewError("Pull events channel is full; skipping sending pull event")
+			s.logger.LogNewError("pull events channel is full; skipping sending pull event")
 		}
 	}
 
@@ -252,7 +252,7 @@ func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, ar
 		output = s.logger.LogShogunGit(output, string(out))
 	}
 	if err != nil {
-		s.logger.LogNewError("Failed to stage changes: %v", err)
+		s.logger.LogNewError("failed to stage changes: %v", err)
 		return output, err
 	}
 
@@ -262,7 +262,7 @@ func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, ar
 		output = s.logger.LogShogunGit(output, string(out))
 	}
 	if err != nil {
-		s.logger.LogNewError("Failed to commit changes: %v", err)
+		s.logger.LogNewError("failed to commit changes: %v", err)
 		return output, err
 	}
 
@@ -272,7 +272,7 @@ func (s *Service) CommitAndPushChanges(ctx context.Context, commitMsg string, ar
 		output = s.logger.LogShogunGit(output, string(out))
 	}
 	if err != nil {
-		s.logger.LogNewError("Failed to push changes: %v", err)
+		s.logger.LogNewError("failed to push changes: %v", err)
 		return output, err
 	}
 	// s.logger.LogInfo("Changes committed and pushed successfully")

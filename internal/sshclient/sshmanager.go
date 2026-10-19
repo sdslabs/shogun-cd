@@ -36,12 +36,12 @@ func (m *Manager) GetClient(target string) (*ssh.Client, error) {
 	defer m.mu.Unlock()
 	client, exists := m.clients[target]
 	if !exists {
-		return nil, fmt.Errorf("No client available")
+		return nil, fmt.Errorf("no client available")
 	}
 	if IsDeadClient(client) {
 		client.Close()
 		delete(m.clients, target)
-		return nil, fmt.Errorf("Client is dead")
+		return nil, fmt.Errorf("client is dead")
 	}
 	return client, nil
 }
@@ -55,7 +55,7 @@ func (m *Manager) NewClient(name string, host string, port int, user string, pri
 	// Create a new SSH client
 	signer, err := ssh.ParsePrivateKey(privateKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse private key: %v", err)
+		return nil, fmt.Errorf("failed to parse private key: %v", err)
 	}
 
 	config := &ssh.ClientConfig{
@@ -70,7 +70,7 @@ func (m *Manager) NewClient(name string, host string, port int, user string, pri
 	addr := fmt.Sprintf("%s:%d", host, port)
 	client, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to dial SSH: %v", err)
+		return nil, fmt.Errorf("failed to dial ssh: %v", err)
 	}
 	m.clients[name] = client
 	return client, nil

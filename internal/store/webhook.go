@@ -17,7 +17,7 @@ type WebhookStore interface {
 }
 
 var (
-	ErrSlugCollision = errors.New("Slug Collision")
+	ErrSlugCollision = errors.New("slug collision")
 )
 
 type webhookStore struct {

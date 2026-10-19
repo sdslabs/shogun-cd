@@ -37,7 +37,7 @@ func (s *InMemoryService) FetchSecret(name string) (string, error) {
 	defer s.mu.RUnlock()
 	value, exists := s.SecretMap[name]
 	if !exists {
-		return "", fmt.Errorf("Secret value not defined")
+		return "", fmt.Errorf("secret value not defined")
 	}
 	return value, nil
 }

@@ -22,8 +22,8 @@ const (
 )
 
 var (
-	ErrEncryption = errors.New("Error Encrypting Data")
-	ErrDecryption = errors.New("Error Decrypting Data")
+	ErrEncryption = errors.New("error encrypting data")
+	ErrDecryption = errors.New("error decrypting data")
 )
 
 type service struct {

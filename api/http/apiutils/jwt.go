@@ -46,5 +46,5 @@ func ParseToken(tokenString string, secret string) (*Claims, error) {
 		return claims, nil
 	}
 
-	return nil, errors.New("Invalid Token")
+	return nil, errors.New("invalid token")
 }

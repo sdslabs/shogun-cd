@@ -22,7 +22,7 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		h.response.ServerError(c, fmt.Errorf("Failed to Read Request Body: %v", err))
+		h.response.ServerError(c, fmt.Errorf("failed to read request body: %v", err))
 		return
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))

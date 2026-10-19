@@ -118,13 +118,13 @@ func mutateYAMLField(node *yaml.Node, fieldPath []string, value string) error {
 					if i == len(fieldPath)-1 {
 						if index != -1 {
 							if n.Content[j+1].Kind != yaml.SequenceNode {
-								return fmt.Errorf("Field %v is not a sequence", fieldPath[i])
+								return fmt.Errorf("field %v is not a sequence", fieldPath[i])
 							}
 							if index >= len(n.Content[j+1].Content) {
-								return fmt.Errorf("Index %d out of bounds for field %v", index, fieldPath[i])
+								return fmt.Errorf("index %d out of bounds for field %v", index, fieldPath[i])
 							}
 							if n.Content[j+1].Content[index].Kind != yaml.ScalarNode {
-								return fmt.Errorf("Field %v is not a scalar", fieldPath[i])
+								return fmt.Errorf("field %v is not a scalar", fieldPath[i])
 							}
 							// Update value
 							fmt.Println("modifying", n.Content[j+1].Content[index].Value, "to", value)
@@ -133,17 +133,17 @@ func mutateYAMLField(node *yaml.Node, fieldPath []string, value string) error {
 						}
 						// Update value
 						if n.Content[j+1].Kind != yaml.ScalarNode {
-							return fmt.Errorf("Field %v is not a scalar", fieldPath[i])
+							return fmt.Errorf("field %v is not a scalar", fieldPath[i])
 						}
 						n.Content[j+1].Value = value
 						return nil
 					} else {
 						if index != -1 {
 							if n.Content[j+1].Kind != yaml.SequenceNode {
-								return fmt.Errorf("Field %v is not a sequence", fieldPath[i])
+								return fmt.Errorf("field %v is not a sequence", fieldPath[i])
 							}
 							if index >= len(n.Content[j+1].Content) {
-								return fmt.Errorf("Index %d out of bounds for field %v", index, fieldPath[i])
+								return fmt.Errorf("index %d out of bounds for field %v", index, fieldPath[i])
 							}
 							// Traverse deeper
 							n = n.Content[j+1].Content[index]
@@ -151,7 +151,7 @@ func mutateYAMLField(node *yaml.Node, fieldPath []string, value string) error {
 							break
 						}
 						if n.Content[j+1].Kind != yaml.MappingNode {
-							return fmt.Errorf("Field %v is not a mapping", fieldPath[i])
+							return fmt.Errorf("field %v is not a mapping", fieldPath[i])
 						}
 						// Traverse deeper
 						n = n.Content[j+1]
@@ -165,14 +165,14 @@ func mutateYAMLField(node *yaml.Node, fieldPath []string, value string) error {
 			return nil
 		} else if n.Kind == yaml.SequenceNode {
 			if index == -1 || index >= len(n.Content) {
-				return fmt.Errorf("Invalid index in field %v", fieldPath[i])
+				return fmt.Errorf("invalid index in field %v", fieldPath[i])
 			}
 			n = n.Content[index]
 			found = true
 		}
 
 		if !found {
-			return fmt.Errorf("Field %v not found", fieldPath[i])
+			return fmt.Errorf("field %v not found", fieldPath[i])
 		}
 		i++
 	}

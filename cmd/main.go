@@ -82,7 +82,7 @@ func initServices() error {
 	// Initialize webhook service
 	webhookService := webhooks.NewWebhookService(logger, orch, store, encryption)
 	if err = webhookService.Load(); err != nil {
-		logger.LogNewError("Unable to load Webhooks : %v", err.Error())
+		logger.LogNewError("unable to load webhooks : %v", err.Error())
 	}
 
 	// Initialize api

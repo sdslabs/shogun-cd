@@ -15,7 +15,7 @@ type Store struct {
 }
 
 var (
-	ErrRecordNotFound = errors.New("Record Not Found")
+	ErrRecordNotFound = errors.New("record not found")
 )
 
 func NewStore(cfg *config.Config, db *gorm.DB) *Store {

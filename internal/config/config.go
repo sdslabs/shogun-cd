@@ -21,14 +21,14 @@ func LoadConfigs(l utils.Logger) (*Config, error) {
 
 	f, err := os.Open(configFilePath)
 	if err != nil {
-		l.LogNewError("Failed to open config file:", err)
+		l.LogNewError("failed to open config file:", err)
 		return nil, err
 	}
 	defer f.Close()
 
 	decoder := yaml.NewDecoder(f)
 	if err := decoder.Decode(&cfg); err != nil {
-		l.LogNewError("Failed to decode config file:", err)
+		l.LogNewError("failed to decode config file:", err)
 		return nil, err
 	}
 

@@ -24,12 +24,12 @@ type WebhookService interface {
 }
 
 var (
-	ErrInvalidJSON      = errors.New("Bad JSON Payload")
-	ErrBadWebhookHeader = errors.New("No Supported Auth header found")
-	ErrInvalidPipeline  = errors.New("Pipeline Does Not Exist")
-	ErrAuthFailed       = errors.New("Payload Authentication Failed")
-	ErrHookInactive     = errors.New("Webhook Inactive")
-	ErrHookNotFound     = errors.New("Webhook Not Found")
+	ErrInvalidJSON      = errors.New("bad json payload")
+	ErrBadWebhookHeader = errors.New("no supported auth header found")
+	ErrInvalidPipeline  = errors.New("pipeline does not exist")
+	ErrAuthFailed       = errors.New("payload authentication failed")
+	ErrHookInactive     = errors.New("webhook inactive")
+	ErrHookNotFound     = errors.New("webhook not found")
 )
 
 type Webhook struct {

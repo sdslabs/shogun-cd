@@ -53,7 +53,7 @@ func (o *orchestrator) Start() {
 
 								match, err := doublestar.Match(path, f)
 								if err != nil {
-									o.logger.LogNewError("Error matching path pattern in pipeline %s: %v", p.Metadata.Name, err)
+									o.logger.LogNewError("error matching path pattern in pipeline %s: %v", p.Metadata.Name, err)
 									continue
 								}
 								if match {
@@ -72,7 +72,7 @@ func (o *orchestrator) Start() {
 				// Run matched pipelines
 				for _, p := range triggeredPipelines {
 					if _, err := o.RunPipeline(ctx, p.Metadata.Name, pipeline.GitChangesTriggerKind, nil); err != nil {
-						o.logger.LogNewError("Failed to start pipeline %s: %v", p.Metadata.Name, err)
+						o.logger.LogNewError("failed to start pipeline %s: %v", p.Metadata.Name, err)
 					}
 				}
 			case <-ctx.Done():
@@ -94,7 +94,7 @@ func (o *orchestrator) StartPoller(ctx context.Context) {
 		case <-ticker.C:
 			o.mu.Lock()
 			if err := o.gitService.Pull(ctx); err != nil {
-				o.logger.LogNewError("Git pull failed: ", err)
+				o.logger.LogNewError("git pull failed: ", err)
 			}
 			o.mu.Unlock()
 		case <-ctx.Done():

@@ -19,9 +19,9 @@ type Service interface {
 }
 
 var (
-	ErrUserNotFound     = errors.New("User Not Found")
-	ErrEmailTaken       = errors.New("User with this email already exists")
-	ErrAccountSuspended = errors.New("Account Suspended")
+	ErrUserNotFound     = errors.New("user not found")
+	ErrEmailTaken       = errors.New("user with this email already exists")
+	ErrAccountSuspended = errors.New("account suspended")
 )
 
 type User struct {

@@ -39,7 +39,7 @@ func (o *orchestrator) RunIndexer() {
 
 		f, err := os.ReadFile(path)
 		if err != nil {
-			o.logger.LogNewError("Failed to read file %s: %v", path, err)
+			o.logger.LogNewError("failed to read file %s: %v", path, err)
 			return nil // ignore invalid yamls
 		}
 
@@ -65,7 +65,7 @@ func (o *orchestrator) RunIndexer() {
 				}
 				pm[name] = p
 			} else {
-				return fmt.Errorf("Invalid pipeline definition %s", path)
+				return fmt.Errorf("invalid pipeline definition %s", path)
 			}
 
 		case "Target":
@@ -78,7 +78,7 @@ func (o *orchestrator) RunIndexer() {
 				}
 				tm[name] = t
 			} else {
-				return fmt.Errorf("Invalid target definition %s", path)
+				return fmt.Errorf("invalid target definition %s", path)
 			}
 		}
 
@@ -89,7 +89,7 @@ func (o *orchestrator) RunIndexer() {
 	// If any error is encountered in walking or parsing, walking will stop and no change in state will occur
 	err := walkRepo(root, commonParser)
 	if err != nil {
-		o.logger.LogNewError("Error Indexing repo: %v", err)
+		o.logger.LogNewError("error indexing repo: %v", err)
 		return
 	}
 

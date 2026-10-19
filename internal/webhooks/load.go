@@ -34,7 +34,7 @@ func (s *Service) Load() error {
 			defer wg.Done()
 			decrypted, err := s.encryption.Decrypt(hook.Secret)
 			if err != nil {
-				s.logger.LogNewError("Failed to load webhook '%s': %v", hook.Slug, err)
+				s.logger.LogNewError("failed to load webhook '%s': %v", hook.Slug, err)
 				return
 			}
 

@@ -72,7 +72,7 @@ func NewGitService(logger utils.Logger, cfg *config.Config) (GitService, error) 
 
 	gitPath, err := exec.LookPath("git")
 	if err != nil {
-		logger.LogNewError("Git executable not found in PATH:", err)
+		logger.LogNewError("git executable not found in path:", err)
 		return nil, err
 	}
 	logger.Log("Git executable found at: %s", gitPath)
@@ -88,13 +88,13 @@ func NewGitService(logger utils.Logger, cfg *config.Config) (GitService, error) 
 	httpURL := strings.HasPrefix(cfg.GitConfig.Repo, "http://") || strings.HasPrefix(cfg.GitConfig.Repo, "https://")
 	// if deploy keys enabled, must be SSH
 	if useKeys && !gitURL {
-		logger.LogNewError("To allow Yaml mutations, deploy key creation must be enabled with SSH based repo URLs")
-		return nil, fmt.Errorf("Deploy Keys and SSH based repo URLs should be always used together")
+		logger.LogNewError("to allow yaml mutations, deploy key creation must be enabled with ssh based repo urls")
+		return nil, fmt.Errorf("deploy keys and ssh based repo urls should be always used together")
 	}
 	// neither ssh nor HTTP
 	if !gitURL && !httpURL {
-		logger.LogNewError("Unsupported git repo URL format: %s", cfg.GitConfig.Repo)
-		return nil, fmt.Errorf("Unsupported git repo URL format")
+		logger.LogNewError("unsupported git repo url format: %s", cfg.GitConfig.Repo)
+		return nil, fmt.Errorf("unsupported git repo url format")
 	}
 
 	gitSvc := &Service{

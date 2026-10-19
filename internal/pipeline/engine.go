@@ -15,7 +15,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 	ctx := context.Background()
 	defer func() {
 		if err := p.finishPipelineRun(ctx, runID, success); err != nil {
-			p.logger.LogNewError("Failed to persist final state for pipeline run %d: %v", runID, err)
+			p.logger.LogNewError("failed to persist final state for pipeline run %d: %v", runID, err)
 		}
 	}()
 
@@ -30,7 +30,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 	}
 
 	if !pipeline.SupportsTrigger(trigger) {
-		p.logger.LogNewError("Pipeline %s does not have trigger of type %s; cannot execute", pipeline.Metadata.Name, string(trigger))
+		p.logger.LogNewError("pipeline %s does not have trigger of type %s; cannot execute", pipeline.Metadata.Name, string(trigger))
 		return false
 	}
 
@@ -69,7 +69,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 			StartedAt: time.Now(),
 		}
 		if err := p.store.CreatePipelineRunStep(ctx, stepData); err != nil {
-			p.logger.LogNewError("Failed to persist start of step %d for pipeline run %d: %v", i+1, runID, err)
+			p.logger.LogNewError("failed to persist start of step %d for pipeline run %d: %v", i+1, runID, err)
 			success = false
 			break
 		}
@@ -81,7 +81,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 
 		// p.logger.Log("Step %d output:\n %s", i+1, out)
 		if err != nil {
-			p.logger.LogNewError("Step %d failed: %v", i+1, err)
+			p.logger.LogNewError("step %d failed: %v", i+1, err)
 			output, _ = deps.Logger.LogShogunError(output, "Step %d failed: %v\n", i+1, err)
 			success = false
 
@@ -90,7 +90,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 			now := time.Now()
 			stepData.FinishedAt = &now
 			if storeErr := p.store.UpdatePipelineRunStep(ctx, stepData); storeErr != nil {
-				p.logger.LogNewError("Failed to persist failure of step %d for pipeline run %d: %v", i+1, runID, storeErr)
+				p.logger.LogNewError("failed to persist failure of step %d for pipeline run %d: %v", i+1, runID, storeErr)
 			}
 
 			break
@@ -102,7 +102,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 		now := time.Now()
 		stepData.FinishedAt = &now
 		if err := p.store.UpdatePipelineRunStep(ctx, stepData); err != nil {
-			p.logger.LogNewError("Failed to persist success of step %d for pipeline run %d: %v", i+1, runID, err)
+			p.logger.LogNewError("failed to persist success of step %d for pipeline run %d: %v", i+1, runID, err)
 			success = false
 			break
 		}
