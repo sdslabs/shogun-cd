@@ -114,11 +114,12 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 		out = es.ParseDelimiter(out)
 		output = deps.Logger.LogShogunInfo(output, "Command output: \n%s", string(out))
 		if execErr != nil {
+			// The engine appends the failure summary; command output is already logged above.
 			if exitErr, ok := execErr.(*ssh.ExitError); ok {
-				return deps.Logger.LogShogunError(output, "Command execution failed on target %s: %v, output: \n %s", es.Target, exitErr, string(out))
+				return output, fmt.Errorf("Command execution failed on target %s: %w", es.Target, exitErr)
 			}
 
-			return deps.Logger.LogShogunError(output, "SSH session error on target %s: %v", es.Target, err)
+			return output, fmt.Errorf("SSH session error on target %s: %w", es.Target, execErr)
 		}
 	}
 

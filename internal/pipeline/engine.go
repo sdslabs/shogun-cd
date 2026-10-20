@@ -77,7 +77,7 @@ func (p *Service) ExecutePipeline(runID uint, pipeline *Pipeline, trigger Trigge
 		out, err := step.Execute(ctx, deps)
 		output += out
 
-		stepData.Logs = p.logger.LogShogunInfo(stepData.Logs, out)
+		stepData.Logs = out
 
 		// p.logger.Log("Step %d output:\n %s", i+1, out)
 		if err != nil {
