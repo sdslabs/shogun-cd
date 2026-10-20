@@ -73,7 +73,7 @@ export function LogViewer({ steps, selectedStep }: { steps: PipelineRunStep[]; s
               const matches = !normalizedSearch || line.toLowerCase().includes(normalizedSearch)
               const plainLine = line.replace(ANSI_PATTERN, "")
               const prompt = plainLine.match(PROMPT_PATTERN)?.[1]
-              return <div key={index} className={cn("flex min-w-max", wrap && "min-w-0", normalizedSearch && matches && "bg-amber-400/8")}><span className="mr-4 w-8 shrink-0 select-none text-right text-zinc-700">{index + 1}</span><code className={cn("block", wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{prompt ? <><span className="font-bold text-[var(--terminal-accent)]">{prompt}</span><span className="text-zinc-300">{plainLine.slice(prompt.length)}</span></> : renderAnsiLine(line)}</code></div>
+              return <div key={index} className={cn("flex min-w-max", wrap && "min-w-0", normalizedSearch && matches && "bg-amber-400/8")}><span className="mr-4 w-8 shrink-0 select-none text-right text-zinc-700">{index + 1}</span><code className={cn("block", wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{prompt ? <><span className="text-zinc-500">{prompt}</span><span className="text-[var(--terminal-accent)]">{plainLine.slice(prompt.length)}</span></> : renderAnsiLine(line)}</code></div>
             })}
           </div>
         ))}
