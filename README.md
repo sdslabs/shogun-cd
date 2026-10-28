@@ -66,6 +66,8 @@ See [examples](examples/) for pipeline and target definitions.
 | YAML mutation | Update values in YAML manifests, then commit and push it. |
 | Secrets | Store SSH keys and other values encrypted at rest which can be accessed in pipelines. |
 | Run history | View pipeline runs and step logs through the API. |
+| Web UI | View pipelines, targets, and runs, and manage webhooks and secrets. |
+| Listing API | List indexed pipelines and targets via `/system/pipelines` and `/system/targets`. |
 
 ## Get started
 
@@ -85,9 +87,7 @@ When API docs are enabled, open `/docs/` in your browser.
 ## Roadmap forward 
 
 - Kubernetes deployments with `apply`
-- Target and pipeline listing API
 - CLI for shogun
-- UI for Shogun
 - API keys
 - Live pipeline logs
 
