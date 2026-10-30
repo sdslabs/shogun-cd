@@ -3,8 +3,6 @@ package secrets
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/kunalvirwal/shogun-cd/internal/encryption"
 	"github.com/kunalvirwal/shogun-cd/internal/models"
@@ -16,7 +14,6 @@ type SecretService interface {
 	SetSecrets(ctx context.Context, in []CreateParams) error
 	FindMany(ctx context.Context, filter *FilterParams) ([]Secret, error)
 	FetchSecret(ctx context.Context, name string) (string, error)
-	ResolveSecrets(ctx context.Context, name string) (string, error) // provides decrypted "value" of the secret
 	DeleteSecret(ctx context.Context, name string) error
 }
 
@@ -91,29 +88,6 @@ func (s *service) FetchSecret(ctx context.Context, name string) (string, error) 
 	}
 
 	return decrypted, nil
-}
-
-// takes a string as input and replaces the {{SECRET_NAME}} with its decrypted value as per the database.
-func (s *service) ResolveSecrets(ctx context.Context, input string) (string, error) {
-	var secretRegex = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
-
-	matches := secretRegex.FindAllStringSubmatch(input, -1)
-
-	output := input
-
-	for _, match := range matches {
-		secretTag := match[0]
-		secretName := match[1]
-
-		decrypted, err := s.FetchSecret(ctx, secretName)
-		if err != nil {
-			return "", err
-		}
-
-		output = strings.ReplaceAll(output, secretTag, decrypted)
-	}
-
-	return output, nil
 }
 
 func (s *service) DeleteSecret(ctx context.Context, name string) error {
