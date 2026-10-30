@@ -21,8 +21,7 @@ type PipelineStore interface {
 }
 
 const (
-	runLabelPrefix = "RUN"
-	runNumberLabel = "RUN_NUMBER"
+	runNumberLabel = "run_number"
 )
 
 // FetchLatestPipelineRuns returns at most one run per pipeline. Run IDs are
@@ -191,6 +190,6 @@ func (p *pipelineStore) FetchPipelineRunParameters(ctx context.Context, pipeline
 	}
 
 	return map[string]string{
-		fmt.Sprintf("%s.%s", runLabelPrefix, runNumberLabel): fmt.Sprint(run.RunNumber),
+		runNumberLabel: fmt.Sprint(run.RunNumber),
 	}, nil
 }
