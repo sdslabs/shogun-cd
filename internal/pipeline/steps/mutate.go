@@ -52,11 +52,11 @@ func (ms *MutateStep) Execute(ctx context.Context, deps *StepDeps) (string, erro
 
 		change.Value, err = deps.ResolveString(ctx, change.Value)
 		if err != nil {
-			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.Value, err)
+			return deps.Logger.LogShogunError(output, "Failed to resolve variable(s) in the string  %s: %v", change.Value, err)
 		}
 		change.UpdateField, err = deps.ResolveString(ctx, change.UpdateField)
 		if err != nil {
-			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", change.UpdateField, err)
+			return deps.Logger.LogShogunError(output, "Failed to resolve variable(s) in the string  %s: %v", change.UpdateField, err)
 		}
 
 		fieldPath := strings.Split(change.UpdateField, ".")

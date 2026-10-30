@@ -1,6 +1,7 @@
 package pipelineSteps
 
 import (
+	"slices"
 	"context"
 	"fmt"
 
@@ -32,13 +33,7 @@ func ShouldRunForTrigger(step Step, trigger string) bool {
 		return true
 	}
 
-	for _, triggerKind := range triggerKinds {
-		if triggerKind == trigger {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(triggerKinds, trigger)
 }
 
 // UnmarshalYAML is an interface hook for custom unmarshaling of StepWrapper

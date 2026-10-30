@@ -60,17 +60,19 @@ func (es *ExecStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	prompt := targetInstance.Spec.User + "@" + targetInstance.Spec.Host + "$ " + delimiter
 	script.WriteString("set -eu\n")
 	for i, cmd := range es.Commands {
-
 		cmd, err = deps.ResolveString(ctx, cmd)
 		if err != nil {
-			return deps.Logger.LogShogunError(output, "Failed to resolve secret(s) in the string  %s: %v", cmd, err)
+			return deps.Logger.LogShogunError(output, "Failed to resolve variable(s) in the string  %s: %v", cmd, err)
 		}
 
-		script.WriteString("echo \"" + prompt + " " + fmt.Sprint(i) + "\"")
+		script.WriteString("echo \"")
+		script.WriteString(prompt)
+		script.WriteString(" ")
+		fmt.Fprint(&script, i)
+		script.WriteString("\"")
 		script.WriteByte('\n')
 		script.WriteString(cmd)
 		script.WriteByte('\n')
-
 	}
 
 	session, err := client.NewSession()

@@ -72,11 +72,11 @@ func (ss *SyncStep) Execute(ctx context.Context, deps *StepDeps) (string, error)
 	for _, file := range ss.Files {
 		src, err := deps.ResolveString(ctx, file.Src)
 		if err != nil {
-			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for source path %s: %v", file.Src, err)
+			return deps.Logger.LogShogunError(output, "Failed to resolve variable(s) for source path %s: %v", file.Src, err)
 		}
 		dst, err := deps.ResolveString(ctx, file.Dst)
 		if err != nil {
-			return deps.Logger.LogShogunError(output, "Failed to resolve secrets for destination path %s: %v", file.Dst, err)
+			return deps.Logger.LogShogunError(output, "Failed to resolve variable(s) for destination path %s: %v", file.Dst, err)
 		}
 
 		srcFile, err := os.Open(filepath.Join(deps.GitService.GetRepoRoot(), src))
