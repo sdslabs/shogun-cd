@@ -28,10 +28,12 @@ export const router = createBrowserRouter([
         { path: "/pipelines/:pipeline/runs/:runId", lazy: async () => ({ Component: (await import("@/features/pipelines/run-page")).RunPage }) },
         { path: "/targets", lazy: async () => ({ Component: (await import("@/features/targets/targets-page")).TargetsPage }) },
         { path: "/targets/:target", lazy: async () => ({ Component: (await import("@/features/targets/target-page")).TargetPage }) },
+        { path: "/crons/:cronId", lazy: async () => ({ Component: (await import("@/features/crons/cron-page")).CronPage }) },
+        { path: "/crons", lazy: async () => ({ Component: (await import("@/features/crons/crons-page")).CronsPage }) },
         { path: "/webhooks", lazy: async () => ({ Component: (await import("@/features/webhooks/webhooks-page")).WebhooksPage }) },
         {
           element: <AdminRoute />,
-          children: [{ path: "/secrets", lazy: async () => ({ Component: (await import("@/features/secrets/secrets-page")).SecretsPage }) }],
+          children: [{ path: "/crons/new", lazy: async () => ({ Component: (await import("@/features/crons/cron-page")).CronPage }) }, { path: "/secrets", lazy: async () => ({ Component: (await import("@/features/secrets/secrets-page")).SecretsPage }) }],
         },
         { path: "*", element: <NotFoundPage /> },
       ],

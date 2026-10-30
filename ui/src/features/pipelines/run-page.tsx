@@ -1,6 +1,6 @@
 import * as React from "react"
 import { ArrowLeft, ChevronRight, Clock3, GitBranch, Radio, Timer } from "lucide-react"
-import { Link, NavLink, useParams } from "react-router-dom"
+import { Link, NavLink, useParams, useSearchParams } from "react-router-dom"
 
 import { ErrorState, PageBody } from "@/components/page"
 import { StepChain } from "@/components/step-chain"
@@ -15,6 +15,9 @@ import { formatDateTime, formatDuration, formatRelativeTime } from "@/lib/format
 import { cn, titleCase } from "@/lib/utils"
 
 export function RunPage() {
+  const [searchParams] = useSearchParams()
+  const cronId = Number(searchParams.get("cron"))
+  const cronBack = Number.isInteger(cronId) && cronId > 0 ? `/crons/${cronId}` : null
   const { pipeline: pipelineParam = "", runId: runIdParam = "" } = useParams()
   const pipelineName = decodeURIComponent(pipelineParam)
   const runId = Number(runIdParam)
@@ -30,14 +33,17 @@ export function RunPage() {
   if (!Number.isInteger(runId) || runId <= 0) return <ErrorState title="Invalid run number" error={new Error("Run IDs must be positive numbers.")} />
   if (runQuery.isLoading || pipelineQuery.isLoading) return <RunPageSkeleton />
   if (runQuery.isError) return <ErrorState error={runQuery.error} retry={() => runQuery.refetch()} />
-  if (!run || !pipelineQuery.pipeline) return <ErrorState title="Run not found" error={new Error(`The requested run is not available for ${pipelineName}.`)} />
+  if (!run) return <ErrorState title="Run not found" error={new Error(`The requested run is not available for ${pipelineName}.`)} />
 
-  const pipeline = pipelineQuery.pipeline
+  const pipeline = pipelineQuery.pipeline ?? {
+    name: pipelineName,
+    steps: run.steps.map(step => ({ index: step.step_index, type: step.step_type, config: {} })),
+  }
   const runNumber = runNumbers.get(run.id)
   return (
     <div>
       <div className="border-b border-border/70 px-5 py-5 sm:px-7 lg:px-9">
-        <Button asChild variant="ghost" size="sm" className="-ml-2 mb-4"><Link to={`/pipelines/${encodeURIComponent(pipeline.name)}`}><ArrowLeft />{pipeline.name}</Link></Button>
+        <Button asChild variant="ghost" size="sm" className="-ml-2 mb-4"><Link to={cronBack ?? `/pipelines/${encodeURIComponent(pipeline.name)}`}><ArrowLeft />{cronBack ? "Back to cron" : pipeline.name}</Link></Button>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center gap-4"><StatusSignal status={run.status} size="lg" /><div><p className="text-[10px] font-semibold tracking-[.18em] text-primary uppercase">Execution</p><h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{pipeline.name} {runNumber ? <span className="font-mono text-muted-foreground">#{runNumber}</span> : null}</h1></div></div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs"><Meta icon={GitBranch} label={titleCase(run.trigger_kind)} /><Meta icon={Clock3} label={formatDateTime(run.started_at)} /><Meta icon={Timer} label={formatDuration(run.started_at, run.finished_at)} />{run.status === "running" ? <Badge variant="info"><Radio className="size-2.5" />Polling live state</Badge> : null}</div>
@@ -49,7 +55,7 @@ export function RunPage() {
           <div className="flex items-center justify-between border-b px-4 py-3"><div><p className="text-[10px] font-semibold tracking-[.14em] text-muted-foreground uppercase">Run switcher</p><p className="mt-1 text-xs font-medium">{runsQuery.data?.length ?? 0} executions</p></div><Button asChild variant="ghost" size="icon-sm"><Link to={`/pipelines/${encodeURIComponent(pipeline.name)}`} aria-label="View all runs"><ChevronRight /></Link></Button></div>
           <div className="max-h-[calc(100vh-230px)] overflow-y-auto p-2">
             {runsQuery.isLoading ? Array.from({ length: 5 }).map((_, index) => <Skeleton className="mb-2 h-14 w-full" key={index} />) : runsQuery.data?.map((item) => (
-              <NavLink key={item.id} to={`/pipelines/${encodeURIComponent(pipeline.name)}/runs/${item.id}`} className={({ isActive }) => cn("mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs transition-colors hover:bg-muted", isActive && "bg-accent text-accent-foreground")}>
+              <NavLink key={item.id} to={`/pipelines/${encodeURIComponent(pipeline.name)}/runs/${item.id}${cronBack ? `?cron=${cronId}` : ""}`} className={({ isActive }) => cn("mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs transition-colors hover:bg-muted", isActive && "bg-accent text-accent-foreground")}>
                 <StatusSignal status={item.status} size="sm" /><span className="min-w-0 flex-1"><span className="block font-mono font-semibold">Run #{runNumbers.get(item.id)}</span><span className="mt-1 block truncate text-[10px] text-muted-foreground">{formatRelativeTime(item.started_at)} · {formatDuration(item.started_at, item.finished_at)}</span></span>
               </NavLink>
             ))}
