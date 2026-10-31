@@ -38,6 +38,8 @@ func Connect(cfg *config.Config, logger utils.Logger) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 	err = db.AutoMigrate(
+		&models.Cron{},
+		&models.CronRun{},
 		&models.User{},
 		&models.Webhook{},
 		&models.Secret{},

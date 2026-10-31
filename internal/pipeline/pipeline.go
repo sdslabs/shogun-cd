@@ -10,11 +10,12 @@ const (
 	WebhookTriggerKind    TriggerKind = "ci_webhook"
 	GitChangesTriggerKind TriggerKind = "git_changes"
 	UITriggerKind         TriggerKind = "ui_trigger"
+	CronTriggerKind       TriggerKind = "cron_trigger"
 )
 
 func IsValidTriggerKind(kind string) bool {
 	switch TriggerKind(kind) {
-	case WebhookTriggerKind, GitChangesTriggerKind, UITriggerKind:
+	case WebhookTriggerKind, GitChangesTriggerKind, UITriggerKind, CronTriggerKind:
 		return true
 	default:
 		return false

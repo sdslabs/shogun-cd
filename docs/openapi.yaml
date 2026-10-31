@@ -41,6 +41,90 @@ x-tagGroups:
       - pipeline/runs
 
 paths:
+  /crons:
+    get:
+      summary: List cron schedules and Shogun timezone
+      description: Available to every authenticated user. All schedules use the configured Shogun timezone.
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Data contains timezone and crons, including next_run in the configured timezone. For paused schedules, next_run is a preview only and will not execute.
+  /crons/deleted:
+    get:
+      summary: List deleted cron definitions
+      description: Authenticated users can view deleted schedules; payload values are visible only to admins.
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Deleted cron definitions }
+  /admin/crons/{cron}/permanent:
+    delete:
+      summary: Permanently delete a deleted cron and its cron run records (admin only)
+      description: Linked pipeline runs are retained. Active crons cannot be permanently deleted.
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: cron, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Cron and cron run records deleted }
+        '403': { description: Admin required }
+        '404': { description: Deleted cron not found }
+  /crons/{cron}:
+    get:
+      summary: Get an active or deleted cron definition
+      description: Deleted crons remain accessible by ID. Payload values are visible only to admins.
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: cron, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Cron definition, including deleted_at when deleted }
+        '404': { description: Cron not found }
+  /crons/{cron}/runs:
+    get:
+      summary: List recorded cron occurrences
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: cron, in: path, required: true, schema: { type: integer, minimum: 1 } }
+        - { name: before, in: query, schema: { type: integer, minimum: 1 }, description: Cursor for older records. Up to 10 records per page, newest first. }
+      responses:
+        '200':
+          description: Data contains runs (up to 10 records) and has_more. Each run includes dispatch status, failure reason, and optional pipeline_run_id and pipeline_run. No retries or backfill.
+  /admin/crons:
+    post:
+      summary: Create a cron (admin only)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CronInput'
+      responses:
+        '200': { description: Cron saved }
+        '400': { description: Invalid configuration }
+        '403': { description: Admin required }
+  /admin/crons/{cron}:
+    parameters:
+      - { name: cron, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    patch:
+      summary: Replace cron configuration (admin only)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CronInput'
+      responses:
+        '200': { description: Cron saved }
+        '400': { description: Invalid configuration }
+        '403': { description: Admin required }
+        '404': { description: Cron not found }
+    delete:
+      summary: Delete cron while retaining run history (admin only)
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Cron deleted }
+        '403': { description: Admin required }
+        '404': { description: Cron not found }
   /docs/:
     get:
       tags: [public/docs]
@@ -764,6 +848,18 @@ components:
       bearerFormat: JWT
 
   schemas:
+    CronInput:
+      type: object
+      required: [name, pipeline, schedule, payload, enabled]
+      properties:
+        name: { type: string, maxLength: 100 }
+        pipeline: { type: string, description: Indexed pipeline declaring cron_trigger }
+        schedule: { type: string, description: Five-field cron expression. No timezone overrides. }
+        payload:
+          type: object
+          description: 'String values may contain {{SECRET_NAME}} references. Resolved at dispatch; history stores references. Resolution failures are recorded without retries.'
+          additionalProperties: { type: string }
+        enabled: { type: boolean }
     LoginInput:
       type: object
       required: [email, password]
@@ -948,7 +1044,7 @@ components:
       properties:
         type:
           type: string
-          enum: [ci_webhook, git_changes, ui_trigger]
+          enum: [ci_webhook, git_changes, ui_trigger, cron_trigger]
         paths:
           type: array
           items:
@@ -968,7 +1064,7 @@ components:
           type: array
           items:
             type: string
-            enum: [ci_webhook, git_changes, ui_trigger]
+            enum: [ci_webhook, git_changes, ui_trigger, cron_trigger]
         target:
           type: string
         config:
@@ -983,7 +1079,7 @@ components:
           type: array
           items:
             type: string
-            enum: [ci_webhook, git_changes, ui_trigger]
+            enum: [ci_webhook, git_changes, ui_trigger, cron_trigger]
         target:
           type: string
         files:

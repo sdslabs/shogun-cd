@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/kunalvirwal/shogun-cd/internal/crons"
 	"os"
 
 	api "github.com/kunalvirwal/shogun-cd/api/http"
@@ -85,8 +87,14 @@ func initServices() error {
 		logger.LogNewError("Unable to load Webhooks : %v", err.Error())
 	}
 
+	cronService, err := crons.NewCronService(store.Cron, orch, logger, cfg.Timezone, secretService)
+	if err != nil {
+		return fmt.Errorf("initialize cron scheduler: %w", err)
+	}
+	cronService.Start(context.Background())
+
 	// Initialize api
-	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService, store, orch)
+	go api.StartAPIServer(logger, cfg, webhookService, userService, secretService, store, orch, cronService)
 
 	<-make(chan struct{}) // Block forever
 	return nil
