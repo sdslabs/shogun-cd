@@ -10,3 +10,4 @@ tmp/
 .commandcode/
 node_modules/
 dist/
+/shogun
