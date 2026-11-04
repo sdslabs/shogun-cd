@@ -13,7 +13,7 @@ var webhookCommand = &cobra.Command{
 }
 
 var webhookTriggerCommand = &cobra.Command{
-	Use:   "trigger",
+	Use:   "trigger <slug> ",
 	Short: "Trigger a webhook using slug",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -22,4 +22,9 @@ var webhookTriggerCommand = &cobra.Command{
 		fmt.Println("POST", url)
 		return nil
 	},
+}
+
+func init() {
+	webhookCommand.AddCommand(webhookTriggerCommand)
+	rootCommand.AddCommand(webhookCommand)
 }
