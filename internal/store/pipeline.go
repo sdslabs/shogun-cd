@@ -64,8 +64,23 @@ func (p *pipelineStore) CreatePipelineRun(ctx context.Context, in *models.Pipeli
 		return ctx.Err()
 	}
 
-	return gorm.G[models.PipelineRun](p.db).
-		Create(ctx, in)
+	// A cron dispatch must never persist a pipeline run without its history link.
+	if cronRunID, ok := ctx.Value(models.CronRunContextKey{}).(uint); ok {
+		return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			if err := tx.Create(in).Error; err != nil {
+				return err
+			}
+			result := tx.Model(&models.CronRun{}).Where("id = ? AND status = ? AND pipeline_run_id IS NULL", cronRunID, "dispatching").Updates(map[string]any{"status": "started", "pipeline_run_id": in.ID})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != 1 {
+				return fmt.Errorf("cron start attempt is no longer dispatchable")
+			}
+			return nil
+		})
+	}
+	return gorm.G[models.PipelineRun](p.db).Create(ctx, in)
 }
 
 func (p *pipelineStore) UpdatePipelineRun(ctx context.Context, in *models.PipelineRun) error {

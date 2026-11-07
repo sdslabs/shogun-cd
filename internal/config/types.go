@@ -1,6 +1,7 @@
 package config
 
 type Config struct {
+	Timezone  string `yaml:"timezone"`
 	Debug     bool   `yaml:"debug"`
 	DataDir   string `yaml:"data_dir"`
 	GitConfig Git    `yaml:"git"`
@@ -19,7 +20,7 @@ type Api struct {
 	Admin      Admin `yaml:"admin"`
 	Port       int   `yaml:"port"`
 	JWT        JWT   `yaml:"jwt"`
-	EnableSpec bool  `yaml:"enable_api_spec"`	
+	EnableSpec bool  `yaml:"enable_api_spec"`
 }
 
 type Admin struct {

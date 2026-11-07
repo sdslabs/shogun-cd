@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/kunalvirwal/shogun-cd/api/http/response"
 	"github.com/kunalvirwal/shogun-cd/internal/config"
+	"github.com/kunalvirwal/shogun-cd/internal/crons"
 	"github.com/kunalvirwal/shogun-cd/internal/orchestrator"
 	"github.com/kunalvirwal/shogun-cd/internal/secrets"
 	"github.com/kunalvirwal/shogun-cd/internal/store"
@@ -20,10 +21,12 @@ type Handler struct {
 	secret   secrets.SecretService
 	store    *store.Store
 	orch     orchestrator.Orchestrator
+	crons    crons.CronService
 }
 
-func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator) *Handler {
+func NewHandler(l utils.Logger, cfg *config.Config, responder response.Responder, wh webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator, cronService crons.CronService) *Handler {
 	return &Handler{
+		crons:    cronService,
 		logger:   l,
 		config:   cfg,
 		response: responder,

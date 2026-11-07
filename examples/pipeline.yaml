@@ -8,6 +8,7 @@ spec:
     triggers:
         - type: "ci_webhook"
         - type: "ui_trigger"
+        - type: cron_trigger
         - type: "git_changes"
           paths: ["services/api/**"]
 

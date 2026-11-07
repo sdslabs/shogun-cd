@@ -36,16 +36,7 @@ func (o *orchestrator) Start() {
 				pipelines := o.Pipelines.Load()
 				triggeredPipelines := make(PipelineMap)
 				for _, p := range *pipelines {
-					i := -1
-					if len(p.Spec.Triggers) == 0 {
-						continue
-					} else {
-						if p.Spec.Triggers[0].Type == string(pipeline.GitChangesTriggerKind) {
-							i = 0
-						} else if len(p.Spec.Triggers) > 1 && p.Spec.Triggers[1].Type == string(pipeline.GitChangesTriggerKind) {
-							i = 1
-						}
-					}
+					i := gitChangesTriggerIndex(p.Spec.Triggers)
 					if i != -1 {
 						for _, f := range files {
 							triggerd := false
@@ -103,4 +94,14 @@ func (o *orchestrator) StartPoller(ctx context.Context) {
 		}
 	}
 
+}
+
+// gitChangesTriggerIndex finds the Git trigger regardless of declaration order.
+func gitChangesTriggerIndex(triggers []pipeline.Trigger) int {
+	for i, trigger := range triggers {
+		if trigger.Type == string(pipeline.GitChangesTriggerKind) {
+			return i
+		}
+	}
+	return -1
 }

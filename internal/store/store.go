@@ -8,6 +8,7 @@ import (
 )
 
 type Store struct {
+	Cron     CronStore
 	User     UserStore
 	Webhook  WebhookStore
 	Secret   SecretStore
@@ -20,6 +21,7 @@ var (
 
 func NewStore(cfg *config.Config, db *gorm.DB) *Store {
 	return &Store{
+		Cron:     newCronStore(db),
 		User:     newUserStore(db),
 		Webhook:  newWebhookStore(db),
 		Secret:   newSecretStore(db),

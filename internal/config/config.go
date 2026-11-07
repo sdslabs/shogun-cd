@@ -1,7 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"time"
+	_ "time/tzdata"
 
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"go.yaml.in/yaml/v3"
@@ -32,6 +35,12 @@ func LoadConfigs(l utils.Logger) (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.Timezone == "" {
+		cfg.Timezone = "UTC"
+	}
+	if _, err := time.LoadLocation(cfg.Timezone); err != nil {
+		return nil, fmt.Errorf("invalid timezone: %w", err)
+	}
 	l.Log("Configs loaded successfully")
 
 	// [TODO] Validate config here if needed

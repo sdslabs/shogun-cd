@@ -20,9 +20,25 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		webhook.POST("/:slug", h.HandleWebhook)
 	}
 
+	cronRoutes := router.Group("/crons", m.AuthRequired)
+	{
+		cronRoutes.GET("", h.ListCrons)
+		cronRoutes.GET("/deleted", h.ListDeletedCrons)
+		cronRoutes.GET("/:cron", h.GetCron)
+		cronRoutes.GET("/:cron/runs", h.CronRuns)
+	}
+
 	admin := router.Group("/admin")
 	admin.Use(m.AuthRequired, m.VerifyAdmin)
 	{
+		cron := admin.Group("/crons")
+		{
+			cron.POST("", h.SaveCron)
+			cron.PATCH("/:cron", h.SaveCron)
+			cron.DELETE("/:cron", h.DeleteCron)
+			cron.DELETE("/:cron/permanent", h.PermanentlyDeleteCron)
+		}
+
 		webhook := admin.Group("/hook")
 		{
 			webhook.POST("", h.CreateWebhook)

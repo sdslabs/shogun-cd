@@ -1,5 +1,6 @@
 import {
   ChevronLeft,
+  Clock3,
   KeyRound,
   LogOut,
   PanelLeftClose,
@@ -21,6 +22,7 @@ const mainNavigation = [
   { label: "Pipelines", href: "/pipelines", icon: Workflow },
   { label: "Targets", href: "/targets", icon: Server },
   { label: "Webhooks", href: "/webhooks", icon: Webhook },
+  { label: "Crons", href: "/crons", icon: Clock3 },
 ]
 
 export function AppSidebar({ collapsed, onCollapsedChange, mobileOpen, onMobileOpenChange }: { collapsed: boolean; onCollapsedChange: (collapsed: boolean) => void; mobileOpen: boolean; onMobileOpenChange: (open: boolean) => void }) {
