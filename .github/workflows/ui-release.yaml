@@ -1,0 +1,70 @@
+name: Shogun-CD UI Production Release
+
+on:
+  push:
+    branches: [prod]
+
+permissions:
+  contents: write
+
+jobs:
+  ui-release:
+    name: Build and Release UI
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+
+      - name: Package and checksum
+        run: |
+          mkdir -p dist-ui
+          tar -czf dist-ui/shogun-ui.tar.gz -C ui/dist .
+
+          cd dist-ui
+          sha256sum shogun-ui.tar.gz > shogun-ui.tar.gz.sha256
+
+          echo "RELEASE_TAG=ui-prod-${GITHUB_SHA:0:6}" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          TAG="$RELEASE_TAG"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release already exists: $TAG"
+            exit 0
+          fi
+
+          gh release create "$TAG" \
+            dist-ui/shogun-ui.tar.gz \
+            dist-ui/shogun-ui.tar.gz.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --generate-notes \
+            --latest=false
+
+      - name: Trigger Shogun Webhook
+        uses: sdslabs/shogun-cd/actions/webhook@develop
+        with:
+          url: ${{ secrets.SHOGUN_UI_HOOK_URL }}
+          secret: ${{ secrets.SHOGUN_UI_HMAC_SECRET }}
+          payload: |
+            release_tag: ${{ env.RELEASE_TAG }}
