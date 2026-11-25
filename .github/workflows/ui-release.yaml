@@ -3,6 +3,8 @@ name: Shogun-CD UI Production Release
 on:
   push:
     branches: [prod]
+    paths:
+      - 'ui/**'
 
 permissions:
   contents: write
