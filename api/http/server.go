@@ -64,6 +64,11 @@ func serveUI(r *gin.Engine) {
 	if err != nil {
 		return
 	}
+	indexHTML, err := fs.ReadFile(uiFS, "index.html")
+	if err != nil {
+		return
+	}
+	fileServer := http.FileServer(http.FS(uiFS))
 	r.NoRoute(func(c *gin.Context) {
 		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
 			c.JSON(http.StatusNotFound, gin.H{"success": false})
@@ -74,13 +79,17 @@ func serveUI(r *gin.Engine) {
 			c.JSON(http.StatusNotFound, gin.H{"success": false})
 			return
 		}
+		// Serve real embedded files only. Anything else falls through to the SPA.
+		// index.html is excluded on purpose: http.FileServer 301-redirects any
+		// path ending in "index.html" to "./", which turns the SPA fallback into
+		// an infinite redirect loop (ERR_TOO_MANY_REDIRECTS). Serve the bytes
+		// directly instead.
 		if path != "" {
-			if f, err := uiFS.Open(path); err == nil {
-				f.Close()
-				c.FileFromFS(path, http.FS(uiFS))
+			if st, statErr := fs.Stat(uiFS, path); statErr == nil && !st.IsDir() && st.Name() != "index.html" {
+				fileServer.ServeHTTP(c.Writer, c.Request)
 				return
 			}
 		}
-		c.FileFromFS("index.html", http.FS(uiFS))
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
 	})
 }
