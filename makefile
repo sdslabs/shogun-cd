@@ -4,12 +4,16 @@ DB_USER=shogun
 DB_PASSWORD=pwd
 DB_NAME=shogun_db
 
-.PHONY: db-run db-down db-logs start
+.PHONY: db-run db-down db-logs start build-ui
 
 start:
 	make db-run || true
 	@echo "Starting Shogun-CD"
 	air
+
+build-ui:
+	cd ui && npm ci && npm run build
+	rm -rf web/static && cp -R ui/dist web/static
 
 db-run:
 	@echo "Starting database container '$(DB_CONTAINER_NAME)' on port $(DB_PORT)..."

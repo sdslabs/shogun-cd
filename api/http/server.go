@@ -2,6 +2,9 @@ package api
 
 import (
 	"fmt"
+	"io/fs"
+	"net/http"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -17,6 +20,7 @@ import (
 	"github.com/kunalvirwal/shogun-cd/internal/users"
 	"github.com/kunalvirwal/shogun-cd/internal/utils"
 	"github.com/kunalvirwal/shogun-cd/internal/webhooks"
+	"github.com/kunalvirwal/shogun-cd/web"
 )
 
 func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookService, u users.Service, secrets secrets.SecretService, store *store.Store, orch orchestrator.Orchestrator, cronService crons.CronService) {
@@ -25,11 +29,13 @@ func StartAPIServer(logger utils.Logger, cfg *config.Config, w webhooks.WebhookS
 	responder := response.NewResponder(cfg.Debug)
 	m := middlewares.NewManager(logger, cfg, responder, w)
 	h := controllers.NewHandler(logger, cfg, responder, w, u, secrets, store, orch, cronService)
-	initRoutes(r, m, h)
+	initRoutes(r.Group("/api"), m, h)
 
 	if cfg.ApiConfig.EnableSpec {
 		docs.Serve(r)
 	}
+
+	serveUI(r)
 
 	if err := r.Run(fmt.Sprintf(":%v", cfg.ApiConfig.Port)); err != nil {
 		logger.LogError(err)
@@ -51,4 +57,30 @@ func newRouter() *gin.Engine {
 	}))
 
 	return r
+}
+
+func serveUI(r *gin.Engine) {
+	uiFS, err := fs.Sub(web.UI, "static")
+	if err != nil {
+		return
+	}
+	r.NoRoute(func(c *gin.Context) {
+		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
+			c.JSON(http.StatusNotFound, gin.H{"success": false})
+			return
+		}
+		path := strings.TrimPrefix(c.Request.URL.Path, "/")
+		if path == "api" || strings.HasPrefix(path, "api/") {
+			c.JSON(http.StatusNotFound, gin.H{"success": false})
+			return
+		}
+		if path != "" {
+			if f, err := uiFS.Open(path); err == nil {
+				f.Close()
+				c.FileFromFS(path, http.FS(uiFS))
+				return
+			}
+		}
+		c.FileFromFS("index.html", http.FS(uiFS))
+	})
 }

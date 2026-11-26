@@ -10,3 +10,7 @@ tmp/
 .commandcode/
 node_modules/
 dist/
+
+# embedded UI is built from ui/dist
+web/static/*
+!web/static/index.html

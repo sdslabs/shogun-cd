@@ -6,21 +6,21 @@ import (
 	"github.com/kunalvirwal/shogun-cd/api/http/middlewares"
 )
 
-func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handler) {
-	auth := router.Group("/auth")
+func initRoutes(api *gin.RouterGroup, m *middlewares.Manager, h *controllers.Handler) {
+	auth := api.Group("/auth")
 	{
 		auth.POST("/login", h.Login)
 		auth.POST("/register", h.Register)
 	}
 
-	webhook := router.Group("/hook")
+	webhook := api.Group("/hook")
 	{
 		webhook.GET("/:pipeline", m.AuthRequired, h.ListWebhooks)
 		webhook.GET("", m.AuthRequired, h.ListWebhooks)
 		webhook.POST("/:slug", h.HandleWebhook)
 	}
 
-	cronRoutes := router.Group("/crons", m.AuthRequired)
+	cronRoutes := api.Group("/crons", m.AuthRequired)
 	{
 		cronRoutes.GET("", h.ListCrons)
 		cronRoutes.GET("/deleted", h.ListDeletedCrons)
@@ -28,7 +28,7 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		cronRoutes.GET("/:cron/runs", h.CronRuns)
 	}
 
-	admin := router.Group("/admin")
+	admin := api.Group("/admin")
 	admin.Use(m.AuthRequired, m.VerifyAdmin)
 	{
 		cron := admin.Group("/crons")
@@ -68,14 +68,14 @@ func initRoutes(router *gin.Engine, m *middlewares.Manager, h *controllers.Handl
 		}
 	}
 
-	system := router.Group("/system")
+	system := api.Group("/system")
 	system.Use(m.AuthRequired)
 	{
 		system.GET("/targets", h.ListAllTargets)
 		system.GET("/pipelines", h.ListAllPipelines)
 	}
 
-	pipelines := router.Group("/pipelines/:pipeline")
+	pipelines := api.Group("/pipelines/:pipeline")
 	pipelines.Use(m.AuthRequired)
 	{
 		runs := pipelines.Group("/runs")

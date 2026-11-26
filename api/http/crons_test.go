@@ -78,24 +78,24 @@ func TestCronPermissions(t *testing.T) {
 	}
 	handler := controllers.NewHandler(logger, cfg, res, nil, nil, nil, nil, nil, service)
 	router := gin.New()
-	initRoutes(router, middlewares.NewManager(logger, cfg, res, nil), handler)
+	initRoutes(router.Group("/api"), middlewares.NewManager(logger, cfg, res, nil), handler)
 	for _, tc := range []struct {
 		role, method, path string
 		want               int
 	}{
-		{"", "GET", "/crons", 401},
-		{"", "GET", "/crons/deleted", 401},
-		{"", "GET", "/crons/1", 401},
-		{"", "GET", "/crons/1/runs", 401},
-		{"", "POST", "/admin/crons", 401},
-		{"", "PATCH", "/admin/crons/1", 401},
-		{"", "DELETE", "/admin/crons/1", 401},
-		{"", "DELETE", "/admin/crons/1/permanent", 401},
-		{"admin", "PATCH", "/admin/crons/1", 400},
-		{"user", "GET", "/crons", 200},
-		{"admin", "GET", "/crons", 200}, {"user", "GET", "/crons/1", 200}, {"user", "GET", "/crons/deleted", 200}, {"admin", "GET", "/crons/deleted", 200}, {"admin", "GET", "/crons/1", 200}, {"user", "GET", "/crons/999", 404}, {"user", "GET", "/crons/1/runs", 200},
-		{"user", "POST", "/admin/crons", 403}, {"user", "PATCH", "/admin/crons/1", 403}, {"user", "DELETE", "/admin/crons/1", 403}, {"user", "DELETE", "/admin/crons/1/permanent", 403}, {"admin", "DELETE", "/admin/crons/1/permanent", 200},
-		{"admin", "POST", "/admin/crons", 400}, {"admin", "DELETE", "/admin/crons/1", 200},
+		{"", "GET", "/api/crons", 401},
+		{"", "GET", "/api/crons/deleted", 401},
+		{"", "GET", "/api/crons/1", 401},
+		{"", "GET", "/api/crons/1/runs", 401},
+		{"", "POST", "/api/admin/crons", 401},
+		{"", "PATCH", "/api/admin/crons/1", 401},
+		{"", "DELETE", "/api/admin/crons/1", 401},
+		{"", "DELETE", "/api/admin/crons/1/permanent", 401},
+		{"admin", "PATCH", "/api/admin/crons/1", 400},
+		{"user", "GET", "/api/crons", 200},
+		{"admin", "GET", "/api/crons", 200}, {"user", "GET", "/api/crons/1", 200}, {"user", "GET", "/api/crons/deleted", 200}, {"admin", "GET", "/api/crons/deleted", 200}, {"admin", "GET", "/api/crons/1", 200}, {"user", "GET", "/api/crons/999", 404}, {"user", "GET", "/api/crons/1/runs", 200},
+		{"user", "POST", "/api/admin/crons", 403}, {"user", "PATCH", "/api/admin/crons/1", 403}, {"user", "DELETE", "/api/admin/crons/1", 403}, {"user", "DELETE", "/api/admin/crons/1/permanent", 403}, {"admin", "DELETE", "/api/admin/crons/1/permanent", 200},
+		{"admin", "POST", "/api/admin/crons", 400}, {"admin", "DELETE", "/api/admin/crons/1", 200},
 	} {
 		t.Run(tc.role+tc.method+tc.path, func(t *testing.T) {
 			req := httptest.NewRequest(tc.method, tc.path, strings.NewReader("{}"))
